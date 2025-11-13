@@ -1,0 +1,11 @@
+server:
+  port: 8085
+
+spring:
+  application:
+    name: monumentos-proxy
+  main:
+    web-application-type: servlet
+
+monumentos:
+  base-url: "https://www.monumentos.gov.pt"

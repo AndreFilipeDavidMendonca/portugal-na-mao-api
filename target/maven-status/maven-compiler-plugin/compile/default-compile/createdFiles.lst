@@ -1,0 +1,10 @@
+pt/dot/monumentosproxy/monumentos/MonumentController.class
+pt/dot/monumentosproxy/monumentos/MonumentResolveController.class
+pt/dot/monumentosproxy/config/CacheConfig.class
+pt/dot/monumentosproxy/monumentos/MonumentWfsService.class
+pt/dot/monumentosproxy/monumentos/MonumentDto$MonumentDtoBuilder.class
+pt/dot/monumentosproxy/monumentos/MonumentSearchRequest.class
+pt/dot/monumentosproxy/monumentos/MonumentDto.class
+pt/dot/monumentosproxy/monumentos/MonumentService.class
+pt/dot/monumentosproxy/config/WebClientConfig.class
+pt/dot/monumentosproxy/MonumentosProxyApplication.class
