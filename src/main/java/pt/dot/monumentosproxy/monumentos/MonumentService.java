@@ -1,22 +1,21 @@
+// src/main/java/pt/dot/monumentosproxy/monumentos/MonumentService.java
 package pt.dot.monumentosproxy.monumentos;
 
-import org.jsoup.Jsoup;
-import org.jsoup.nodes.Document;
-import org.jsoup.nodes.Element;
-import org.jsoup.select.Elements;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Mono;
 
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
 import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 public class MonumentService {
+
+    private static final Logger log = LoggerFactory.getLogger(MonumentService.class);
 
     private final WebClient monumentosWebClient;
 
@@ -24,161 +23,233 @@ public class MonumentService {
         this.monumentosWebClient = monumentosWebClient;
     }
 
-    /* ------------------------- DEBUG HTML RAW ------------------------- */
-
-    public String fetchRawSipaPage(String idOrName) {
-        try {
-            String encoded = URLEncoder.encode(idOrName, StandardCharsets.UTF_8);
-            String path = "/Site/APP_PagesUser/SIPA.aspx?id=" + encoded;
-
-            return monumentosWebClient
-                    .get()
-                    .uri(path)
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .onErrorResume(ex -> {
-                        System.err.println("[SIPA RAW] erro: " + ex.getMessage());
-                        return Mono.empty();
-                    })
-                    .blockOptional()
-                    .orElse("");
-        } catch (Exception e) {
-            e.printStackTrace();
-            return "";
-        }
-    }
-
-    /* ------------------------ NORMALIZATION ------------------------ */
+    /* ---------- Helpers ---------- */
 
     private String norm(String value) {
         if (value == null) return null;
 
-        String base = java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
+        return java.text.Normalizer.normalize(value, java.text.Normalizer.Form.NFD)
                 .replaceAll("\\p{InCombiningDiacriticalMarks}+", "")
                 .replaceAll("[^\\p{IsAlphabetic}\\p{IsDigit}\\s]", " ")
                 .replaceAll("\\s+", " ")
                 .trim()
                 .toLowerCase(Locale.ROOT);
-
-        return base;
     }
 
-    /* ------------------------ SEARCH BY NAME ------------------------ */
+    private String asString(Object o) {
+        return (o == null) ? null : String.valueOf(o);
+    }
 
-    @Cacheable(cacheNames = "monumentsByName", key = "#name.toLowerCase()")
+    private Double asDouble(Object o) {
+        if (o instanceof Number n) return n.doubleValue();
+        if (o instanceof String s) {
+            try { return Double.parseDouble(s); } catch (NumberFormatException ignored) {}
+        }
+        return null;
+    }
+
+    /* ---------- Search by name (ArcGIS GeoJSON) ---------- */
+
+    @Cacheable(
+            cacheNames = "monumentsByName",
+            key = "#name.toLowerCase()",
+            unless = "#result == null || #result.isEmpty()"
+    )
     public List<MonumentDto> searchByName(String name) {
-        if (!StringUtils.hasText(name)) return List.of();
+        log.info("[MonumentService] searchByName() called with name='{}'", name);
+
+        if (!StringUtils.hasText(name)) {
+            log.info("[MonumentService] name vazio/null – devolver lista vazia.");
+            return List.of();
+        }
+
+        String normQuery = norm(name);
 
         try {
-            String encoded = URLEncoder.encode(name, StandardCharsets.UTF_8);
-            String path = "/Site/APP_PagesUser/SIPA.aspx?id=" + encoded;
-
-            String html = monumentosWebClient
+            GeoJsonFeatureCollection fc = monumentosWebClient
                     .get()
-                    .uri(path)
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/query")
+                            .queryParam("f", "geojson")
+                            .queryParam("where", "1=1")
+                            .queryParam("outFields", "*")
+                            .build()
+                    )
                     .retrieve()
-                    .bodyToMono(String.class)
-                    .onErrorResume(ex -> Mono.empty())
+                    .bodyToMono(GeoJsonFeatureCollection.class)
+                    .onErrorResume(ex -> {
+                        log.error("[MonumentService] HTTP error ao chamar ArcGIS: {}", ex.getMessage());
+                        return Mono.empty();
+                    })
                     .block();
 
-            if (html == null || html.isBlank()) return List.of();
-
-            Document doc = Jsoup.parse(html);
-
-            // Tentativa: página de detalhe
-            MonumentDto single = parseDetailPage(doc, null);
-            if (single != null) return List.of(single);
-
-            // Tentativa: lista
-            List<MonumentDto> list = new ArrayList<>();
-            for (Element card : doc.select(".resultado, .result, tr")) {
-                MonumentDto dto = parseListCard(card);
-                if (dto != null) list.add(dto);
+            if (fc == null || fc.getFeatures() == null || fc.getFeatures().isEmpty()) {
+                log.warn("[MonumentService] GeoJSON vazio ou sem features.");
+                return List.of();
             }
 
-            return list;
+            log.info("[MonumentService] Nº total de features recebidas = {}", fc.getFeatures().size());
+
+            List<MonumentDto> result = fc.getFeatures().stream()
+                    .map(this::toDto)
+                    .filter(Objects::nonNull)
+                    .filter(dto -> {
+                        String n = norm(dto.getOriginalName());
+                        return n != null && n.contains(normQuery);
+                    })
+                    .collect(Collectors.toList());
+
+            log.info("[MonumentService] Nº de candidatos após filtro por nome='{}' = {}", name, result.size());
+            return result;
+
         } catch (Exception e) {
+            log.error("[MonumentService] Exception em searchByName", e);
             return List.of();
         }
     }
 
-    /* ------------------------ PARSERS ------------------------ */
+    /* ---------- Mapping GeoJSON → MonumentDto ---------- */
 
-    private String text(Element e) {
-        return e != null ? e.text() : null;
-    }
+    private MonumentDto toDto(GeoJsonFeature feature) {
+        if (feature == null || feature.getProperties() == null) return null;
 
-    private MonumentDto parseListCard(Element card) {
-        String name = text(card.selectFirst("a, strong, h2, h3"));
-        if (!StringUtils.hasText(name)) return null;
+        Map<String, Object> p = feature.getProperties();
 
-        String href = Optional.ofNullable(card.selectFirst("a"))
-                .map(a -> a.absUrl("href"))
-                .orElse(null);
+        String codSig    = asString(p.get("COD_SIG"));
+        String nome      = asString(p.get("INF_NOME"));
+        String morada    = asString(p.get("INF_MORADA"));
+        String freguesia = asString(p.get("FREGUESIA"));
+        String descricao = asString(p.get("INF_DESCRICAO"));
+        String site      = asString(p.get("INF_SITE"));
+        String email     = asString(p.get("INF_EMAIL"));
+        String telefone  = asString(p.get("INF_TELEFONE"));
 
-        String slug = null;
-        if (href != null && href.contains("id=")) {
-            slug = href.substring(href.indexOf("id=") + 3);
+        Double lon = null;
+        Double lat = null;
+        if (feature.getGeometry() != null &&
+                feature.getGeometry().getCoordinates() != null &&
+                feature.getGeometry().getCoordinates().size() >= 2) {
+            lon = asDouble(feature.getGeometry().getCoordinates().get(0));
+            lat = asDouble(feature.getGeometry().getCoordinates().get(1));
         }
 
-        return MonumentDto.builder()
-                .id(slug)
-                .slug(slug)
-                .originalName(name)
-                .normalizedName(norm(name))
-                .shortDescription(text(card.selectFirst("p")))
-                .sourceUrl(href)
-                .build();
-    }
+        String shortDesc = descricao;
+        if (shortDesc != null && shortDesc.length() > 240) {
+            shortDesc = shortDesc.substring(0, 240) + "...";
+        }
 
-    private MonumentDto parseDetailPage(Document doc, String slug) {
-        Element titleEl = doc.selectFirst("h1, .titulo, .title");
-        if (titleEl == null) return null;
-
-        String name = titleEl.text();
-
-        // campos básicos
-        String shortDesc = text(doc.selectFirst(".descricao, .texto, p"));
-        String fullHtml = Optional.ofNullable(doc.selectFirst(".descricao, .texto"))
-                .map(Element::html)
-                .orElse(null);
-
-        // imagens
-        List<String> images = doc.select("img").stream()
-                .map(img -> img.absUrl("src"))
-                .filter(s -> !s.isBlank())
-                .distinct()
-                .limit(20)
-                .toList();
-
-        // tabelas
         Map<String, String> extra = new LinkedHashMap<>();
-
-        for (Element row : doc.select("table tr")) {
-            Element th = row.selectFirst("th");
-            Element td = row.selectFirst("td");
-            if (th != null && td != null) extra.put(th.text(), td.text());
-        }
-
-        // <dl> estruturas
-        for (Element dl : doc.select("dl")) {
-            Elements dts = dl.select("dt");
-            Elements dds = dl.select("dd");
-            for (int i = 0; i < Math.min(dts.size(), dds.size()); i++) {
-                extra.putIfAbsent(dts.get(i).text(), dds.get(i).text());
-            }
-        }
+        if (morada != null)   extra.put("Morada", morada);
+        if (telefone != null) extra.put("Telefone", telefone);
+        if (email != null)    extra.put("Email", email);
+        if (site != null)     extra.put("Site", site);
 
         return MonumentDto.builder()
-                .id(slug)
-                .slug(slug)
-                .originalName(name)
-                .normalizedName(norm(name))
+                .id(codSig != null ? codSig : asString(feature.getId()))
+                .slug(codSig)
+                .originalName(nome != null ? nome : "Monumento sem nome")
+                .normalizedName(norm(nome))
+                .locality("Lisboa")   // este dataset é só Lisboa
+                .district("Lisboa")
+                .concelho("Lisboa")
+                .freguesia(freguesia)
+                .lat(lat)
+                .lon(lon)
                 .shortDescription(shortDesc)
-                .fullDescriptionHtml(fullHtml)
-                .imageUrls(images)
+                .fullDescriptionHtml(descricao != null ? "<p>" + descricao + "</p>" : null)
+                .heritageCategory("Monumento Nacional")
+                .propertyType("Propriedade pública")
+                .protectionStatus("Classificado")
+                .imageUrls(List.of()) // dataset não traz fotos
+                .sourceUrl(site)
                 .extraAttributes(extra)
-                .sourceUrl(doc.location())
                 .build();
+    }
+
+    /* ---------- GeoJSON helper classes ---------- */
+
+    public static class GeoJsonFeatureCollection {
+        private String type;
+        private List<GeoJsonFeature> features;
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+
+        public List<GeoJsonFeature> getFeatures() { return features; }
+        public void setFeatures(List<GeoJsonFeature> features) { this.features = features; }
+    }
+
+    public static class GeoJsonFeature {
+        private String type;
+        private Object id;
+        private GeoJsonGeometry geometry;
+        private Map<String, Object> properties;
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+
+        public Object getId() { return id; }
+        public void setId(Object id) { this.id = id; }
+
+        public GeoJsonGeometry getGeometry() { return geometry; }
+        public void setGeometry(GeoJsonGeometry geometry) { this.geometry = geometry; }
+
+        public Map<String, Object> getProperties() { return properties; }
+        public void setProperties(Map<String, Object> properties) { this.properties = properties; }
+    }
+
+    public static class GeoJsonGeometry {
+        private String type;
+        private List<Double> coordinates;
+
+        public String getType() { return type; }
+        public void setType(String type) { this.type = type; }
+
+        public List<Double> getCoordinates() { return coordinates; }
+        public void setCoordinates(List<Double> coordinates) { this.coordinates = coordinates; }
+    }
+
+    public List<MonumentDto> searchByBbox(double minX, double minY, double maxX, double maxY) {
+        log.info("[MonumentService] searchByBbox() minX={}, minY={}, maxX={}, maxY={}",
+                minX, minY, maxX, maxY);
+
+        String geometry = minX + "," + minY + "," + maxX + "," + maxY;
+
+        try {
+            GeoJsonFeatureCollection fc = monumentosWebClient
+                    .get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/query")
+                            .queryParam("f", "geojson")
+                            .queryParam("geometry", geometry)
+                            .queryParam("geometryType", "esriGeometryEnvelope")
+                            .queryParam("spatialRel", "esriSpatialRelIntersects")
+                            .queryParam("outFields", "*")
+                            .build()
+                    )
+                    .retrieve()
+                    .bodyToMono(GeoJsonFeatureCollection.class)
+                    .onErrorResume(ex -> {
+                        log.error("[MonumentService] HTTP error em searchByBbox: {}", ex.getMessage());
+                        return Mono.empty();
+                    })
+                    .block();
+
+            if (fc == null || fc.getFeatures() == null || fc.getFeatures().isEmpty()) {
+                log.info("[MonumentService] searchByBbox: sem features.");
+                return List.of();
+            }
+
+            log.info("[MonumentService] searchByBbox: {} features recebidas.", fc.getFeatures().size());
+
+            return fc.getFeatures().stream()
+                    .map(this::toDto)
+                    .filter(Objects::nonNull)
+                    .toList();
+
+        } catch (Exception e) {
+            log.error("[MonumentService] Exception em searchByBbox", e);
+            return List.of();
+        }
     }
 }

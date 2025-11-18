@@ -18,6 +18,9 @@ public class MonumentController {
         this.wfsService = wfsService;
     }
 
+    /**
+     * Pesquisa monumentos por bounding box (minX/minY/maxX/maxY).
+     */
     @GetMapping
     public List<MonumentDto> byBoundingBox(
             @RequestParam double minX,

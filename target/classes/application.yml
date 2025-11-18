@@ -8,4 +8,4 @@ spring:
     web-application-type: servlet
 
 monumentos:
-  base-url: "https://www.monumentos.gov.pt"
+  base-url: "https://services.arcgis.com/1dSrzEWVQn5kHHyK/arcgis/rest/services/Patrimonio/FeatureServer/12"

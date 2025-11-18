@@ -2,8 +2,10 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/config/CacheConfig.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/config/WebClientConfig.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentController.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentDebugController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentResolveController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentSearchRequest.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentWfsService.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/monumentosproxy/monumentos/MonumentosWebClientConfig.java

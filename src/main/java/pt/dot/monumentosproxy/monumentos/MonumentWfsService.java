@@ -1,12 +1,18 @@
 package pt.dot.monumentosproxy.monumentos;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 @Service
 public class MonumentWfsService {
+
+    private static final Logger log = LoggerFactory.getLogger(MonumentWfsService.class);
 
     private final MonumentService monumentService;
 
@@ -16,67 +22,111 @@ public class MonumentWfsService {
 
     /**
      * Resolve o "melhor" monumento dado um nome + coordenadas do clique.
+     * Estratégia:
+     *  - procura por nome
+     *  - entre os candidatos com lat/lon, escolhe o mais próximo do clique
+     *  - se ninguém tiver coords, usa o primeiro como está e aplica coords do clique
+     *  - se não houver candidatos, usa fallback dummy
      */
     public MonumentDto findBestMatch(String name, double lat, double lon) {
-        System.out.println("[MonumentWfsService] findBestMatch name=" + name +
-                " lat=" + lat + " lon=" + lon);
+        log.info("findBestMatch() called. name='{}', lat={}, lon={}", name, lat, lon);
 
-        // 1) tentar de verdade no SIPA
         List<MonumentDto> candidates = monumentService.searchByName(name);
+        int count = (candidates == null) ? 0 : candidates.size();
+        log.info("Candidates size = {}", count);
 
-        if (candidates != null && !candidates.isEmpty()) {
-            MonumentDto best = candidates.get(0);
-
-            // se o SIPA não tiver coords, usamos as do click
-            if (best.getLat() == null || best.getLon() == null) {
-                best.setLat(lat);
-                best.setLon(lon);
-            }
-
-            System.out.println("[MonumentWfsService] bestMatch vindo do SIPA: " + best.getOriginalName());
-            return best;
+        if (candidates == null || candidates.isEmpty()) {
+            log.warn("No candidates found – using DUMMY fallback.");
+            return createDummy(name, lat, lon);
         }
 
-        // 2) Fallback: dummy rico só para garantir fluxo
-        System.out.println("[MonumentWfsService] Nenhum candidato – usar DUMMY fallback");
+        // Tenta escolher o candidato com coordenadas mais próximas
+        MonumentDto bestWithCoords = candidates.stream()
+                .filter(c -> c.getLat() != null && c.getLon() != null)
+                .min(Comparator.comparingDouble(c ->
+                        distanceKm(lat, lon, c.getLat(), c.getLon())
+                ))
+                .orElse(null);
 
-        return MonumentDto.builder()
+        MonumentDto best;
+        if (bestWithCoords != null) {
+            best = bestWithCoords;
+            log.info("Best candidate WITH coords: id={}, originalName='{}', lat={}, lon={}",
+                    best.getId(), best.getOriginalName(), best.getLat(), best.getLon());
+        } else {
+            // fallback: ninguém tem coords → usamos o primeiro
+            best = candidates.get(0);
+            log.info("Best candidate WITHOUT coords (fallback to first): id={}, originalName='{}'",
+                    best.getId(), best.getOriginalName());
+        }
+
+        // se o melhor não tiver coords, usamos as do clique
+        if (best.getLat() == null || best.getLon() == null) {
+            log.debug("Best candidate sem coords – aplicar coords do clique.");
+            best.setLat(lat);
+            best.setLon(lon);
+        }
+
+        return best;
+    }
+
+    /**
+     * Pesquisa por bounding box – delega para MonumentService.
+     */
+    public List<MonumentDto> searchByBbox(double minX, double minY, double maxX, double maxY) {
+        log.info("searchByBbox() called. minX={}, minY={}, maxX={}, maxY={}",
+                minX, minY, maxX, maxY);
+
+        List<MonumentDto> result = monumentService.searchByBbox(minX, minY, maxX, maxY);
+        log.info("searchByBbox() → {} resultados", result.size());
+        return result;
+    }
+
+    /* ----------------- Helpers ----------------- */
+
+    private MonumentDto createDummy(String name, double lat, double lon) {
+        MonumentDto dummy = MonumentDto.builder()
                 .id("dummy-sipa-123")
-                .slug("castelo-de-sao-jorge")
+                .slug("dummy")
                 .originalName(name != null ? name : "Monumento desconhecido")
                 .normalizedName(name != null ? name.toLowerCase() : "monumento-desconhecido")
                 .locality("Lisboa")
                 .district("Lisboa")
                 .concelho("Lisboa")
-                .freguesia("Santa Maria Maior")
+                .freguesia("Desconhecida")
                 .lat(lat)
                 .lon(lon)
-                .shortDescription("Dummy SIPA description apenas para testar o fluxo.")
+                .shortDescription("Dummy description apenas para testar o fluxo.")
                 .fullDescriptionHtml("<p>Descrição longa dummy do monumento. (Fallback)</p>")
-                .heritageCategory("Monumento Nacional")
-                .propertyType("Propriedade pública")
-                .protectionStatus("Proteção genérica")
-                .imageUrls(List.of(
-                        "https://example.com/img/castelo1.jpg",
-                        "https://example.com/img/castelo2.jpg"
-                ))
-                .sourceUrl("https://www.example.com/sipa/castelo-s-jorge")
+                .heritageCategory("Desconhecido")
+                .propertyType("Desconhecido")
+                .protectionStatus("Desconhecido")
+                .imageUrls(List.of())
+                .sourceUrl(null)
                 .extraAttributes(Map.of(
-                        "Estado", "Fallback dummy (sem dados reais do SIPA)",
+                        "Estado", "Fallback dummy (sem dados reais)",
                         "Origem dos dados", "Dummy local no MonumentWfsService"
                 ))
                 .build();
+
+        log.info("Dummy created: id={}, originalName='{}'", dummy.getId(), dummy.getOriginalName());
+        return dummy;
     }
 
     /**
-     * Stub para o endpoint /api/monumentos (bounding box).
-     * Mantemos a assinatura para o MonumentController não rebentar.
+     * Distância aproximada em km usando fórmula de Haversine.
      */
-    public List<MonumentDto> searchByBbox(double minX, double minY, double maxX, double maxY) {
-        System.out.println("[MonumentWfsService] searchByBbox minX=" + minX +
-                " minY=" + minY + " maxX=" + maxX + " maxY=" + maxY);
+    private double distanceKm(double lat1, double lon1, double lat2, double lon2) {
+        final double R = 6371.0; // raio da Terra em km
 
-        // Por agora devolvemos lista vazia – depois ligamos isto a um WFS de verdade.
-        return List.of();
+        double dLat = Math.toRadians(lat2 - lat1);
+        double dLon = Math.toRadians(lon2 - lon1);
+
+        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
+                * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+
+        double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+        return R * c;
     }
 }
