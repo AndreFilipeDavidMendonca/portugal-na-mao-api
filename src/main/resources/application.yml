@@ -7,5 +7,46 @@ spring:
   main:
     web-application-type: servlet
 
+  datasource:
+    url: jdbc:postgresql://localhost:5432/pt_dot
+    username: ptdot_user
+    password: ptdot_pass
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update        # em produção provavelmente vais querer "validate"
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    show-sql: true
+
+  sql:
+    init:
+      mode: never
+
 monumentos:
-  base-url: "https://services.arcgis.com/1dSrzEWVQn5kHHyK/arcgis/rest/services/Patrimonio/FeatureServer/12"
+  base-url: "http://servicos.dgterritorio.pt/SDISNITZWMS_SIPA_PPP_IHRU/service.svc/get"
+  wfs:
+    type-name: "SIPA:Patrimonio"   # AJUSTAR com o typeName real do GetCapabilities
+    srs-name: "EPSG:4326"          # usamos WGS84 para bater com lat/lon do OSM
+
+dot:
+  osm:
+    import-on-startup: false
+
+logging:
+  level:
+    pt.dot.application.service: DEBUG
+    pt.dot.application.monumentos: DEBUG
+
+# -------------------------------
+# BOOTSTRAP .PT (controla a BD)
+# -------------------------------
+ptdot:
+  bootstrap:
+    reset-pois: false # limpa a tabela poi
+    import-district-metadata: false
+    import-osm-pois: false      # só OSM
+    enrich-pois: true
