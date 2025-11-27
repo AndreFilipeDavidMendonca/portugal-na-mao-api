@@ -12,8 +12,6 @@ import pt.dot.application.db.entity.District;
 import pt.dot.application.db.entity.Poi;
 import pt.dot.application.db.repo.DistrictRepository;
 import pt.dot.application.db.repo.PoiRepository;
-import pt.dot.application.monumentos.MonumentDto;
-import pt.dot.application.monumentos.MonumentService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -27,16 +25,13 @@ public class PoiEnrichmentService {
 
     private final DistrictRepository districtRepository;
     private final PoiRepository poiRepository;
-    private final MonumentService monumentService;
     private final WikipediaService wikipediaService;
 
     public PoiEnrichmentService(DistrictRepository districtRepository,
                                 PoiRepository poiRepository,
-                                MonumentService monumentService,
                                 WikipediaService wikipediaService) {
         this.districtRepository = districtRepository;
         this.poiRepository = poiRepository;
-        this.monumentService = monumentService;
         this.wikipediaService = wikipediaService;
     }
 
@@ -47,9 +42,8 @@ public class PoiEnrichmentService {
     /**
      * Percorre a BD já populada com POIs (via OSM) e tenta enriquecer:
      *  - atribui distrito por proximidade (se ainda não tiver)
-     *  - tenta match no SIPA (respeitando categoria/tipo)
      *  - tenta summary na Wikipedia (respeitando categoria/tipo)
-     *  - tenta sempre buscar imagens (Wiki, e no futuro SIPA)
+     *  - tenta sempre buscar imagens (Wiki)
      */
     @Transactional
     public void enrichAllExistingPois() {
@@ -100,14 +94,13 @@ public class PoiEnrichmentService {
 
     /**
      * Decide se ainda vale a pena tentar enriquecer um dado POI.
-     * Mesmo que já tenha descrição, continua a enriquecer se faltar distrito / wiki / imagens / sipa.
+     * (já não depende de SIPA, só de distrito / wiki / imagens / descrição)
      */
     private boolean needsEnrichment(Poi poi) {
         // Só mexemos em POIs vindos do OSM (ou OSM+enriched)
         String source = poi.getSource();
         if (source == null || !source.startsWith("osm")) return false;
 
-        boolean missingSipa     = poi.getSipaId() == null || poi.getSipaId().isBlank();
         boolean missingWiki     = poi.getWikipediaUrl() == null || poi.getWikipediaUrl().isBlank();
         boolean missingDesc     = poi.getDescription() == null
                 || poi.getDescription().isBlank()
@@ -115,17 +108,18 @@ public class PoiEnrichmentService {
         boolean missingImage    = poi.getImage() == null || poi.getImage().isBlank();
         boolean missingDistrict = poi.getDistrict() == null;
 
-        return missingSipa || missingWiki || missingDesc || missingImage || missingDistrict;
+        return missingWiki || missingDesc || missingImage || missingDistrict;
     }
 
     /**
      * Enriquecimento de um único POI já existente na BD.
+     * Agora apenas:
+     *  - resolve distrito
+     *  - tenta Wikipedia (desc + imagem)
      */
     private boolean enrichSinglePoi(Poi poi) {
         boolean changed = false;
 
-        boolean gotDescFromSipa = false;
-        boolean gotImageFromSipa = false;
         boolean gotDescFromWiki = false;
         boolean gotImageFromWiki = false;
 
@@ -143,73 +137,7 @@ public class PoiEnrichmentService {
             }
         }
 
-        // 2) SIPA (com verificação de compatibilidade de tipo)
-        if (poi.getSipaId() == null || poi.getSipaId().isBlank()) {
-            log.debug("[PoiEnrichment] [SIPA] Procurar match para poiId={} name='{}' lat={} lon={}",
-                    poi.getId(), poi.getName(), poi.getLat(), poi.getLon());
-
-            MonumentDto fromSipa = monumentService.findBestMatch(
-                    poi.getName(),
-                    poi.getLat(),
-                    poi.getLon()
-            );
-
-            if (fromSipa != null) {
-                String candidateTitle = fromSipa.getOriginalName();
-                String candidateText = (candidateTitle == null ? "" : candidateTitle + " ")
-                        + (fromSipa.getShortDescription() != null ? fromSipa.getShortDescription() : "");
-
-                Type poiType = mapCategoryToType(poi.getCategory());
-                Type candidateType = detectTypeFromText(candidateText);
-
-                log.debug("[PoiEnrichment] [SIPA] Candidate id={} title='{}' poiType={} candidateType={}",
-                        fromSipa.getId(), candidateTitle, poiType, candidateType);
-
-                if (!isTypeCompatible(poiType, candidateType)) {
-                    log.info("[PoiEnrichment] SIPA match descartado por tipo incompatível: poiType={} candidateType={} poiId={} name='{}' sipaTitle='{}'",
-                            poiType, candidateType, poi.getId(), poi.getName(), candidateTitle);
-                } else {
-                    log.info("[PoiEnrichment] SIPA match para POI id={} name={} -> sipaId={}",
-                            poi.getId(), poi.getName(), fromSipa.getId());
-
-                    if (fromSipa.getOriginalName() != null && !fromSipa.getOriginalName().isBlank()) {
-                        poi.setName(fromSipa.getOriginalName());
-                        poi.setNamePt(fromSipa.getOriginalName());
-                        gotDescFromSipa = true; // nome/título também contam como enriquecimento
-                    }
-
-                    String description = fromSipa.getShortDescription();
-                    if ((description == null || description.isBlank())
-                            && fromSipa.getFullDescriptionHtml() != null) {
-                        description = fromSipa.getFullDescriptionHtml()
-                                .replaceAll("<[^>]+>", " ")
-                                .replaceAll("\\s+", " ")
-                                .trim();
-                    }
-
-                    // só substitui se a descrição actual for fraca
-                    boolean isDescFraca = poi.getDescription() == null
-                            || poi.getDescription().isBlank()
-                            || "Ponto de interesse ainda sem descrição detalhada.".equals(poi.getDescription());
-
-                    if (isDescFraca && description != null && !description.isBlank()) {
-                        poi.setDescription(description);
-                        gotDescFromSipa = true;
-                    }
-
-                    poi.setSipaId(fromSipa.getId());
-                    changed = true;
-                }
-            } else {
-                log.debug("[PoiEnrichment] [SIPA] Nenhum match encontrado para poiId={} name='{}'",
-                        poi.getId(), poi.getName());
-            }
-        }
-
-        log.info("[PoiEnrichment] POI id={} (osmId={}) — SIPA desc={}, SIPA img={}",
-                poi.getId(), poi.getExternalOsmId(), gotDescFromSipa, gotImageFromSipa);
-
-        // 3) Wikipedia (sempre tentamos; só sobrescreve descrição se a actual for fraca)
+        // 2) Wikipedia (sempre tentamos; só sobrescreve descrição se a actual for fraca)
         WikipediaSummary wiki = wikipediaService.fetchSummary(
                 poi.getName(),
                 poi.getLat(),
@@ -264,7 +192,7 @@ public class PoiEnrichmentService {
         log.info("[PoiEnrichment] POI id={} (osmId={}) — Wiki desc={}, Wiki img={}",
                 poi.getId(), poi.getExternalOsmId(), gotDescFromWiki, gotImageFromWiki);
 
-        // 4) fallback de descrição
+        // 3) fallback de descrição
         if (poi.getDescription() == null || poi.getDescription().isBlank()) {
             poi.setDescription("Ponto de interesse ainda sem descrição detalhada.");
             changed = true;
@@ -307,75 +235,17 @@ public class PoiEnrichmentService {
             return toDto(existing.get());
         }
 
-        boolean gotDescFromSipa = false;
-        boolean gotImageFromSipa = false;
         boolean gotDescFromWiki = false;
         boolean gotImageFromWiki = false;
 
-        // 2) tentar enriquecer com SIPA (com verificação de tipo)
-        log.debug("[PoiEnrichment][create] [SIPA] Procurar match para name='{}' lat={} lon={}",
-                snapshot.getName(), snapshot.getLat(), snapshot.getLon());
-
-        MonumentDto fromSipa = monumentService.findBestMatch(
-                snapshot.getName(),
-                snapshot.getLat(),
-                snapshot.getLon()
-        );
-
         String finalName = snapshot.getName();
         String description = null;
-        String sipaId = null;
         String wikipediaUrl = null;
         List<String> imageList = new ArrayList<>();
 
         Type poiType = mapCategoryToType(snapshot.getCategory());
 
-        if (fromSipa != null) {
-            String candidateTitle = fromSipa.getOriginalName();
-            String candidateText = (candidateTitle == null ? "" : candidateTitle + " ")
-                    + (fromSipa.getShortDescription() != null ? fromSipa.getShortDescription() : "");
-
-            Type candidateType = detectTypeFromText(candidateText);
-
-            log.debug("[PoiEnrichment][create] [SIPA] Candidate id={} title='{}' poiType={} candidateType={}",
-                    fromSipa.getId(), candidateTitle, poiType, candidateType);
-
-            if (!isTypeCompatible(poiType, candidateType)) {
-                log.info("[PoiEnrichment] SIPA match descartado (createOrEnrich) por tipo incompatível: poiType={} candidateType={} osmId={} sipaTitle='{}'",
-                        poiType, candidateType, snapshot.getOsmId(), candidateTitle);
-            } else {
-                log.info("[PoiEnrichment] SIPA match encontrado: id={} | nome={}",
-                        fromSipa.getId(), fromSipa.getOriginalName());
-
-                if (fromSipa.getOriginalName() != null && !fromSipa.getOriginalName().isBlank()) {
-                    finalName = fromSipa.getOriginalName();
-                    gotDescFromSipa = true;
-                }
-
-                description = fromSipa.getShortDescription();
-                if ((description == null || description.isBlank())
-                        && fromSipa.getFullDescriptionHtml() != null) {
-                    description = fromSipa.getFullDescriptionHtml()
-                            .replaceAll("<[^>]+>", " ")
-                            .replaceAll("\\s+", " ")
-                            .trim();
-                }
-
-                if (description != null && !description.isBlank()) {
-                    gotDescFromSipa = true;
-                }
-
-                sipaId = fromSipa.getId();
-            }
-        } else {
-            log.debug("[PoiEnrichment][create] [SIPA] Nenhum match encontrado para osmId={} name='{}'",
-                    snapshot.getOsmId(), snapshot.getName());
-        }
-
-        log.info("[PoiEnrichment][create] osmId={} — SIPA desc={}, SIPA img={}",
-                snapshot.getOsmId(), gotDescFromSipa, gotImageFromSipa);
-
-        // 3) Wikipedia: se não tivermos descrição, usa summary; se já tivermos, usa só imagem/URL
+        // 1) Wikipedia: se não tivermos descrição, usa summary; se já tivermos, usa só imagem/URL
         WikipediaSummary wiki = wikipediaService.fetchSummary(
                 snapshot.getName(),
                 snapshot.getLat(),
@@ -418,12 +288,12 @@ public class PoiEnrichmentService {
         log.info("[PoiEnrichment][create] osmId={} — Wiki desc={}, Wiki img={}",
                 snapshot.getOsmId(), gotDescFromWiki, gotImageFromWiki);
 
-        // 4) fallback total de descrição
+        // 2) fallback total de descrição
         if (description == null || description.isBlank()) {
             description = "Ponto de interesse ainda sem descrição detalhada.";
         }
 
-        // 5) criar o POI na BD
+        // 3) criar o POI na BD
         Poi poi = new Poi();
         poi.setDistrict(district);
         poi.setName(finalName);
@@ -434,7 +304,8 @@ public class PoiEnrichmentService {
         poi.setLat(snapshot.getLat());
         poi.setLon(snapshot.getLon());
         poi.setWikipediaUrl(wikipediaUrl);
-        poi.setSipaId(sipaId);
+        // sipaId fica sempre null nesta fase
+        poi.setSipaId(null);
         poi.setExternalOsmId(snapshot.getOsmId());
         poi.setSource("osm+enriched");
 
@@ -525,7 +396,7 @@ public class PoiEnrichmentService {
                 p.getLat(),
                 p.getLon(),
                 p.getWikipediaUrl(),
-                p.getSipaId(),
+                p.getSipaId(),          // ainda existe no DTO/DB, mas agora fica null
                 p.getExternalOsmId(),
                 p.getSource(),
                 p.getImage(),
@@ -559,7 +430,7 @@ public class PoiEnrichmentService {
     }
 
     // ========================================================================
-    // Helpers de tipo/categoria
+    // Helpers de tipo/categoria (mantidos para filtrar summaries da Wiki)
     // ========================================================================
 
     private enum Type {
@@ -637,7 +508,6 @@ public class PoiEnrichmentService {
      * Regra de compatibilidade entre tipo do POI e tipo inferido do texto.
      * - Igual → OK
      * - UNKNOWN em qualquer lado → não bloqueia
-     * - VIEWPOINT é o único que pode aceitar matches de PARK/MONUMENT (praça/jardim/afins)
      */
     private boolean isTypeCompatible(Type poiType, Type candidateType) {
         if (poiType == Type.UNKNOWN || candidateType == Type.UNKNOWN) {
@@ -648,7 +518,7 @@ public class PoiEnrichmentService {
             return true;
         }
 
-        // regra especial: viewpoints podem encaixar em praça/jardim/monumento
+        // VIEWPOINT pode aceitar parque/monumento
         if (poiType == Type.VIEWPOINT &&
                 (candidateType == Type.PARK || candidateType == Type.MONUMENT || candidateType == Type.VIEWPOINT)) {
             return true;
