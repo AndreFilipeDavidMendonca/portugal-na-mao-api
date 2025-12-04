@@ -5,6 +5,8 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.util.List;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -19,10 +21,12 @@ public class DistrictDto {
     private Double lat;
     private Double lon;
     private String description;
-
-    // Novos campos
     private String inhabitedSince;
     private String history;
     private Integer municipalitiesCount;
     private Integer parishesCount;
+
+    // URLs / strings dos ficheiros
+    private List<String> files;
+    private List<String> sources;
 }

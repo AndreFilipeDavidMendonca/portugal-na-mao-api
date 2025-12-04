@@ -1,10 +1,9 @@
+// src/main/java/pt/dot/application/api/PoiController.java
 package pt.dot.application.api;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pt.dot.application.api.dto.OsmPoiSnapshot;
 import pt.dot.application.api.dto.PoiDto;
-import pt.dot.application.service.PoiEnrichmentService;
 import pt.dot.application.service.PoiService;
 
 import java.util.List;
@@ -19,35 +18,34 @@ import java.util.List;
 )
 public class PoiController {
 
-    private final PoiEnrichmentService poiEnrichmentService;
     private final PoiService poiService;
 
-    public PoiController(
-            PoiEnrichmentService poiEnrichmentService,
-            PoiService poiService
-            ) {
+    public PoiController(PoiService poiService) {
         this.poiService = poiService;
-        this.poiEnrichmentService = poiEnrichmentService;
     }
 
-    @PostMapping("/from-osm")
-    public ResponseEntity<PoiDto> createFromOsm(@RequestBody OsmPoiSnapshot snapshot) {
-        PoiDto dto = poiEnrichmentService.createOrEnrichFromOsm(snapshot);
-        return ResponseEntity.ok(dto);
-    }
-
+    // GET /api/pois  → TODOS os POIs
     @GetMapping
-    public ResponseEntity<List<PoiDto>> getPois(
-            @RequestParam(required = false) Integer districtId,
-            @RequestParam(required = false) String category
-    ) {
-        List<PoiDto> list = poiEnrichmentService.findPois(districtId, category);
-        return ResponseEntity.ok(list);
+    public ResponseEntity<List<PoiDto>> listPois() {
+        List<PoiDto> pois = poiService.findAll();
+        return ResponseEntity.ok(pois);
     }
 
-    @GetMapping("/by-osm-id")
-    public ResponseEntity<PoiDto> getByExternalOsmId(@RequestParam String externalOsmId) {
-        return poiService.findByExternalOsmId(externalOsmId)
+    // GET /api/pois/{id} → 1 POI
+    @GetMapping("/{id}")
+    public ResponseEntity<PoiDto> getById(@PathVariable Long id) {
+        return poiService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    // PUT /api/pois/{id} → update parcial (PATCH) usando PoiDto
+    @PutMapping("/{id}")
+    public ResponseEntity<PoiDto> updatePoi(
+            @PathVariable Long id,
+            @RequestBody PoiDto body
+    ) {
+        return poiService.updatePoi(id, body)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }

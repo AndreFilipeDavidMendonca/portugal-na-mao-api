@@ -1,13 +1,12 @@
+// src/main/java/pt/dot/application/api/DistrictController.java
 package pt.dot.application.api;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import pt.dot.application.api.dto.DistrictDetailDto;
 import pt.dot.application.api.dto.DistrictDto;
-import pt.dot.application.api.dto.PoiDto;
+import pt.dot.application.api.dto.DistrictUpdateRequest;
 import pt.dot.application.db.entity.District;
-import pt.dot.application.db.entity.Poi;
 import pt.dot.application.db.repo.DistrictRepository;
-import pt.dot.application.db.repo.PoiRepository;
 
 import java.util.List;
 import java.util.Optional;
@@ -24,68 +23,87 @@ import java.util.stream.Collectors;
 public class DistrictController {
 
     private final DistrictRepository districtRepository;
-    private final PoiRepository poiRepository;
 
-    public DistrictController(DistrictRepository districtRepository,
-                              PoiRepository poiRepository) {
+    public DistrictController(DistrictRepository districtRepository) {
         this.districtRepository = districtRepository;
-        this.poiRepository = poiRepository;
     }
 
-    // 1) Lista básica de distritos
+    // 1) Lista básica (sem files para ficar leve)
     @GetMapping("/districts")
     public List<DistrictDto> listDistricts() {
         List<District> entities = districtRepository.findAllByOrderByNameAsc();
         return entities.stream()
-                .map(this::toDistrictDto)
+                .map(this::toDistrictDtoWithoutFiles)
                 .collect(Collectors.toList());
     }
 
-    // 2) Detalhe simples de distrito
+    // 2) Detalhe com files
     @GetMapping("/districts/{id}")
     public ResponseEntity<DistrictDto> getDistrict(@PathVariable Long id) {
         Optional<District> opt = districtRepository.findById(id);
-        return opt.map(district -> ResponseEntity.ok(toDistrictDto(district)))
-                .orElseGet(() -> ResponseEntity.notFound().build());
-    }
-
-    // 3) só POIs de um distrito
-    @GetMapping("/districts/{id}/pois")
-    public ResponseEntity<List<PoiDto>> getPoisForDistrict(@PathVariable Long id) {
-        if (!districtRepository.existsById(id)) {
+        if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
-
-        List<Poi> pois = poiRepository.findByDistrict_IdOrderByNameAsc(id);
-        List<PoiDto> dto = pois.stream()
-                .map(this::toPoiDto)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(dto);
+        District d = opt.get();
+        return ResponseEntity.ok(toDistrictDtoWithFiles(d));
     }
 
-    // 4) distrito + pois num só payload
-    @GetMapping("/districts/{id}/detail")
-    public ResponseEntity<DistrictDetailDto> getDistrictDetail(@PathVariable Long id) {
+    // 3) PUT – atualiza meta + files (usando DistrictUpdateRequest)
+    @PutMapping("/districts/{id}")
+    public ResponseEntity<DistrictDto> updateDistrict(
+            @PathVariable Long id,
+            @RequestBody DistrictUpdateRequest payload
+    ) {
         Optional<District> opt = districtRepository.findById(id);
         if (opt.isEmpty()) {
             return ResponseEntity.notFound().build();
         }
 
-        District district = opt.get();
-        List<Poi> pois = poiRepository.findByDistrict_IdOrderByNameAsc(id);
+        District d = opt.get();
 
-        DistrictDetailDto dto = new DistrictDetailDto(
-                toDistrictDto(district),
-                pois.stream().map(this::toPoiDto).collect(Collectors.toList())
-        );
+        // Texto / nomes (só se não forem null)
+        if (payload.getName() != null) {
+            d.setName(payload.getName());
+        }
+        if (payload.getNamePt() != null) {
+            d.setNamePt(payload.getNamePt());
+        }
+        if (payload.getDescription() != null) {
+            d.setDescription(payload.getDescription());
+        }
+        if (payload.getHistory() != null) {
+            d.setHistory(payload.getHistory());
+        }
+        if (payload.getInhabitedSince() != null) {
+            d.setInhabitedSince(payload.getInhabitedSince());
+        }
 
-        return ResponseEntity.ok(dto);
+        // Numéricos (podem ser null para limpar)
+        if (payload.getPopulation() != null) {
+            d.setPopulation(payload.getPopulation());
+        }
+        if (payload.getMunicipalitiesCount() != null) {
+            d.setMunicipalitiesCount(payload.getMunicipalitiesCount());
+        }
+        if (payload.getParishesCount() != null) {
+            d.setParishesCount(payload.getParishesCount());
+        }
+
+        if (payload.getFiles() != null) {
+            d.setFiles(payload.getFiles());
+        }
+        if (payload.getSources() != null) {
+            d.setSources(payload.getSources());
+        }
+
+        District saved = districtRepository.save(d);
+        return ResponseEntity.ok(toDistrictDtoWithFiles(saved));
     }
 
-    // ---- mappers ----
+    // -------- mapeadores privados --------
 
-    private DistrictDto toDistrictDto(District d) {
+    // usado na lista (sem files)
+    private DistrictDto toDistrictDtoWithoutFiles(District d) {
         return new DistrictDto(
                 d.getId(),
                 d.getCode(),
@@ -99,32 +117,30 @@ public class DistrictController {
                 d.getInhabitedSince(),
                 d.getHistory(),
                 d.getMunicipalitiesCount(),
-                d.getParishesCount()
+                d.getParishesCount(),
+                null,
+                null
         );
     }
 
-    // src/main/java/pt/dot/application/api/DistrictController.java
-// ... resto igual ...
-
-    private PoiDto toPoiDto(Poi p) {
-        Long districtId = (p.getDistrict() != null ? p.getDistrict().getId() : null);
-
-        return new PoiDto(
-                p.getId(),
-                districtId,
-                p.getName(),
-                p.getNamePt(),
-                p.getCategory(),
-                p.getSubcategory(),
-                p.getDescription(),
-                p.getLat(),
-                p.getLon(),
-                p.getWikipediaUrl(),
-                p.getSipaId(),
-                p.getExternalOsmId(),
-                p.getSource(),
-                p.getImage(),
-                p.getImages()
+    // usado no detalhe (GET/PUT)
+    private DistrictDto toDistrictDtoWithFiles(District d) {
+        return new DistrictDto(
+                d.getId(),
+                d.getCode(),
+                d.getName(),
+                d.getNamePt(),
+                d.getPopulation(),
+                d.getFoundedYear(),
+                d.getLat(),
+                d.getLon(),
+                d.getDescription(),
+                d.getInhabitedSince(),
+                d.getHistory(),
+                d.getMunicipalitiesCount(),
+                d.getParishesCount(),
+                d.getFiles(),
+                d.getSources()
         );
     }
 }

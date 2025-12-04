@@ -46,7 +46,12 @@ logging:
 # -------------------------------
 ptdot:
   bootstrap:
-    reset-pois: false # limpa a tabela poi
+    reset-pois: false
     import-district-metadata: false
-    import-osm-pois: false      # só OSM
-    enrich-pois: true
+    sync-pois-from-csv: false
+    import-district-files: true          # 👈 ativa o import do district_files.csv
+
+  sipa:
+    pois-csv-path: "classpath:/sipa/pois.csv"
+    poi-images-csv-path: "classpath:/sipa/poi_images.csv"
+    district-files-csv-path: "classpath:/db/sipa/district_files.csv" # ou /sipa/, conforme tiveres o ficheiro

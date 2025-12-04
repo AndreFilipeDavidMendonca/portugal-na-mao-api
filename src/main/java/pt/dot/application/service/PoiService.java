@@ -4,68 +4,64 @@ package pt.dot.application.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.dot.application.api.dto.PoiDto;
-import pt.dot.application.db.entity.District;
 import pt.dot.application.db.entity.Poi;
-import pt.dot.application.db.repo.DistrictRepository;
 import pt.dot.application.db.repo.PoiRepository;
 
 import java.util.List;
 import java.util.Optional;
-import java.util.stream.Collectors;
 
 @Service
 @Transactional
 public class PoiService {
 
     private final PoiRepository poiRepository;
-    private final DistrictRepository districtRepository;
 
-    public PoiService(PoiRepository poiRepository,
-                      DistrictRepository districtRepository) {
+    public PoiService(PoiRepository poiRepository) {
         this.poiRepository = poiRepository;
-        this.districtRepository = districtRepository;
     }
 
     // ---------- LISTAGENS / LEITURA ----------
 
-    public Optional<PoiDto> findByExternalOsmId(String externalOsmId) {
-        return poiRepository.findByExternalOsmId(externalOsmId)
+    public List<PoiDto> findAll() {
+        return poiRepository.findAll()
+                .stream()
+                .map(this::toDto)
+                .toList();
+    }
+
+    public Optional<PoiDto> findById(Long id) {
+        return poiRepository.findById(id)
                 .map(this::toDto);
     }
 
-    // ---------- CRIAÇÃO A PARTIR DO OSM / MANUAL ----------
+    // ---------- UPDATE (PATCH COM PoiDto) ----------
 
-    public PoiDto createFromOsmSnapshot(CreatePoiFromOsmRequest req) {
-        District district = districtRepository.findById(req.getDistrictId())
-                .orElseThrow(() -> new IllegalArgumentException("Distrito não encontrado: " + req.getDistrictId()));
+    public Optional<PoiDto> updatePoi(Long id, PoiDto dto) {
+        return poiRepository.findById(id).map(poi -> {
 
-        Poi poi = new Poi();
-        poi.setDistrict(district);
-        poi.setName(req.getName());
-        poi.setNamePt(req.getNamePt());
-        poi.setCategory(req.getCategory());
-        poi.setSubcategory(req.getSubcategory());
-        poi.setDescription(req.getDescription());
-        poi.setLat(req.getLat());
-        poi.setLon(req.getLon());
-        poi.setWikipediaUrl(req.getWikipediaUrl());
-        poi.setSipaId(req.getSipaId());
-        poi.setExternalOsmId(req.getOsmId());
-        poi.setSource(req.getSource() != null ? req.getSource() : "osm");
+            // Só atualiza o que vier != null
+            if (dto.getName() != null) {
+                poi.setName(dto.getName());
+            }
+            if (dto.getNamePt() != null) {
+                poi.setNamePt(dto.getNamePt());
+            }
+            if (dto.getDescription() != null) {
+                poi.setDescription(dto.getDescription());
+            }
+            if (dto.getImage() != null) {
+                poi.setImage(dto.getImage());
+            }
+            if (dto.getImages() != null) {
+                poi.setImages(dto.getImages());
+            }
 
-        Poi saved = poiRepository.save(poi);
-        return toDto(saved);
-    }
+            // Se no futuro quiseres permitir edição de mais campos,
+            // é só ir acrescentando aqui com o mesmo padrão.
 
-    // ---------- FUTURO: lookup por nome+coords ----------
-
-    public List<PoiDto> lookupByNameAndCoords(String name, Double lat, Double lon, Double maxDistanceKm) {
-        // versão simples: só por nome (depois refinamos com coordenadas)
-        List<Poi> results = poiRepository.findByNameIgnoreCase(name);
-
-        return results.stream()
-                .map(this::toDto)
-                .collect(Collectors.toList());
+            Poi saved = poiRepository.save(poi);
+            return toDto(saved);
+        });
     }
 
     // ---------- MAPPER ENTITY -> DTO ----------

@@ -3,6 +3,9 @@ package pt.dot.application.db.entity;
 
 import jakarta.persistence.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "district")
 public class District {
@@ -35,7 +38,7 @@ public class District {
     @Column(columnDefinition = "text")
     private String description;
 
-    // 🔥 NOVOS CAMPOS
+    // 🔥 NOVOS CAMPOS DE METADATA
 
     @Column(name = "inhabited_since", length = 255)
     private String inhabitedSince;
@@ -49,7 +52,24 @@ public class District {
     @Column(name = "parishes_count")
     private Integer parishesCount;
 
-    // getters & setters...
+    // 🔥 NOVO: ficheiros (imagens / vídeos) associados ao distrito
+    @ElementCollection
+    @CollectionTable(
+            name = "district_files",
+            joinColumns = @JoinColumn(name = "district_id")
+    )
+    @Column(name = "file_url", columnDefinition = "text")
+    private List<String> files = new ArrayList<>();
+
+    @ElementCollection
+    @CollectionTable(
+            name = "district_sources",
+            joinColumns = @JoinColumn(name = "district_id")
+    )
+    @Column(name = "source", columnDefinition = "text")
+    private List<String> sources = new ArrayList<>();
+
+    // ===== getters & setters =====
 
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
@@ -89,4 +109,12 @@ public class District {
 
     public Integer getParishesCount() { return parishesCount; }
     public void setParishesCount(Integer parishesCount) { this.parishesCount = parishesCount; }
+
+    public List<String> getFiles() { return files; }
+    public void setFiles(List<String> files) { this.files = files; }
+
+    public List<String> getSources() { return files; }
+    public void setSources(List<String> files) { this.files = files; }
+
+
 }
