@@ -23,5 +23,4 @@ pt/dot/application/db/repo/DistrictRepository.class
 pt/dot/application/api/DistrictController.class
 pt/dot/application/service/PoiService.class
 pt/dot/application/db/entity/Poi.class
-pt/dot/application/api/dto/DistrictDetailDto.class
 pt/dot/application/config/CorsConfig.class

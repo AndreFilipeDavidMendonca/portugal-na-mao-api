@@ -3,7 +3,6 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/DistrictMetadataBootstrap.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/DistrictController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/PoiController.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/DistrictDetailDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/DistrictDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/DistrictUpdateRequest.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiDto.java

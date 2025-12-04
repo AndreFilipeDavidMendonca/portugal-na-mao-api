@@ -11,7 +11,6 @@ import java.util.Optional;
 @Repository
 public interface PoiRepository extends JpaRepository<Poi, Long> {
 
-    Optional<Poi> findByExternalOsmId(String externalOsmId);
+    Optional<Poi> findBySipaId(String sipaId);
 
-    List<Poi> findByNameIgnoreCase(String name);
 }

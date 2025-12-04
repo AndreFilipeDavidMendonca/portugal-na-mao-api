@@ -25,48 +25,66 @@ public class PoiCsvSyncService {
 
     private final PoiRepository poiRepository;
 
+    // Índices do CSV pois.csv
+    // id,name,name_pt,category,subcategory,architect,year,
+    // description,wikipedia_url,sipa_id,lat,lon,source
+    private static final int IDX_ID          = 0;
+    private static final int IDX_NAME        = 1;
+    private static final int IDX_NAME_PT     = 2;
+    private static final int IDX_CATEGORY    = 3;
+    private static final int IDX_SUBCATEGORY = 4;
+    private static final int IDX_ARCHITECT   = 5;
+    private static final int IDX_YEAR        = 6;
+    private static final int IDX_DESC        = 7;
+    private static final int IDX_WIKI        = 8;
+    private static final int IDX_SIPA        = 9;
+    private static final int IDX_LAT         = 10;
+    private static final int IDX_LON         = 11;
+    private static final int IDX_SOURCE      = 12;
+
     public PoiCsvSyncService(PoiRepository poiRepository) {
         this.poiRepository = poiRepository;
     }
 
     /**
-     * Lê:
-     *  - CSV de POIs (pois_full.csv)
-     *  - CSV de imagens extra (poi_images.csv)
-
-     * Cria/actualiza a tabela poi com:
-     *  - name/namePt/category/subcategory/description
-     *  - wikipediaUrl, sipaId
-     *  - image (main_image) + lista images (main_image + extra)
-     *
-     * O campo "id" do CSV é apenas um ID lógico para ligar ao CSV de imagens.
+     * Pequeno helper para obter campo por índice, já com trim.
      */
+    private String field(CSVRecord record, int idx) {
+        try {
+            String v = record.get(idx);
+            return v != null ? v.trim() : null;
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Transactional
     public void syncFromCsv(Resource poisCsv, Resource imagesCsv) {
         if (poisCsv == null || !poisCsv.exists()) {
             throw new IllegalArgumentException("CSV de POIs não encontrado: " + poisCsv);
         }
 
-        log.info("[PoiCsvSync] Iniciar sync a partir de POIs={} imagens={}", poisCsv, imagesCsv);
+        log.info("[PoiCsvSync] Iniciar sync CSV={} imagens={}", poisCsv, imagesCsv);
 
-        // 1) importar POIs base e manter mapa csvId -> Poi
         Map<Integer, Poi> poiByCsvId = importPois(poisCsv);
 
-        // 2) importar imagens extra e anexar a cada Poi
         importImages(imagesCsv, poiByCsvId);
 
-        long count = poiRepository.count();
-        log.info("[PoiCsvSync] Sincronização concluída. POIs na BD: {}", count);
+        log.info("[PoiCsvSync] Concluído. POIs na BD: {}", poiRepository.count());
     }
 
-    // ---------------------------------------------------------
-    // 1) Importar POIs base (pois_full.csv)
-    // ---------------------------------------------------------
+    /**
+     * Importa/atualiza POIs a partir de pois.csv.
+     * - Usa o ID do CSV apenas como chave lógica (para o segundo CSV de imagens).
+     * - Faz matching por SIPA ID (se existir) para atualizar em vez de duplicar.
+     */
     private Map<Integer, Poi> importPois(Resource poisCsv) {
         Map<Integer, Poi> map = new HashMap<>();
 
         int total = 0;
         int created = 0;
+        int updated = 0;
+        int skipped = 0;
 
         try (Reader reader = new BufferedReader(
                 new InputStreamReader(poisCsv.getInputStream(), StandardCharsets.UTF_8))) {
@@ -80,34 +98,47 @@ public class PoiCsvSyncService {
             for (CSVRecord record : parser) {
                 total++;
 
-                Integer csvId = parseInt(trim(record, "id"));
+                Integer csvId       = parseInt(field(record, IDX_ID));
+                String name         = field(record, IDX_NAME);
+                String namePt       = field(record, IDX_NAME_PT);
+                String category     = field(record, IDX_CATEGORY);
+                String subcategory  = field(record, IDX_SUBCATEGORY);
+                String architect    = field(record, IDX_ARCHITECT);
+                String yearText     = field(record, IDX_YEAR);
+                String description  = field(record, IDX_DESC);
+                String wikipediaUrl = field(record, IDX_WIKI);
+                String sipaId       = field(record, IDX_SIPA);
+                Double lat          = parseDouble(field(record, IDX_LAT));
+                Double lon          = parseDouble(field(record, IDX_LON));
+                String source       = field(record, IDX_SOURCE);
+
                 if (csvId == null) {
-                    log.warn("[PoiCsvSync] Linha {} sem 'id' válido, a ignorar.", total);
+                    skipped++;
                     continue;
                 }
 
-                String name = trim(record, "name");
-                String namePt = trim(record, "name_pt");
-                String category = trim(record, "category");
-                String subcategory = trim(record, "subcategory");
-                String description = trim(record, "description");
-                String wikipediaUrl = trim(record, "wikipedia_url");
-                String sipaId = trim(record, "sipa_id");
-                Double lat = parseDouble(trim(record, "lat"));
-                Double lon = parseDouble(trim(record, "lon"));
-                String source = trim(record, "source");
-                String mainImage = trim(record, "main_image");
-
+                // Campos mínimos obrigatórios
                 if (name == null || name.isBlank() || lat == null || lon == null) {
-                    log.warn("[PoiCsvSync] Linha {} com campos obrigatórios em falta (name/lat/lon).", total);
+                    skipped++;
                     continue;
                 }
 
-                // Para simplificar: assumimos que já limpaste a tabela poi antes.
-                // Criamos sempre um novo POI. (Se quiseres matching, depois afinamos.)
-                Poi poi = new Poi();
+                Poi poi = null;
+
+                // MATCHING: SIPA ID → se existir, tentamos atualizar em vez de criar
+                if (sipaId != null && !sipaId.isBlank()) {
+                    poi = poiRepository.findBySipaId(sipaId).orElse(null);
+                }
+
+                if (poi == null) {
+                    poi = new Poi();
+                    created++;
+                } else {
+                    updated++;
+                }
+
                 poi.setName(name);
-                poi.setNamePt((namePt != null && !namePt.isBlank()) ? namePt : name);
+                poi.setNamePt(namePt != null && !namePt.isBlank() ? namePt : name);
                 poi.setCategory(category);
                 poi.setSubcategory(subcategory);
                 poi.setDescription(description);
@@ -115,34 +146,34 @@ public class PoiCsvSyncService {
                 poi.setLon(lon);
                 poi.setWikipediaUrl(wikipediaUrl);
                 poi.setSipaId(sipaId);
-                poi.setSource((source != null && !source.isBlank()) ? source : "csv:pois");
+                poi.setSource(source != null && !source.isBlank() ? source : "csv:pois");
 
-                // imagem principal
-                List<String> images = new ArrayList<>();
-                if (mainImage != null && !mainImage.isBlank()) {
-                    poi.setImage(mainImage);
-                    images.add(mainImage);
-                }
-                poi.setImages(images.isEmpty() ? null : images);
+                // estes setters assumem que já tens os campos em Poi
+                poi.setArchitect(architect);
+                poi.setYearText(yearText);
 
-                Poi saved = poiRepository.save(poi);
-                created++;
+                poi = poiRepository.save(poi);
 
-                map.put(csvId, saved);
+                // ligamos o ID lógico do CSV a este POI (para o CSV de imagens)
+                map.put(csvId, poi);
             }
 
+            log.info(
+                    "[PoiCsvSync] Linhas lidas={} criados={} atualizados={} ignorados={}",
+                    total, created, updated, skipped
+            );
+
         } catch (Exception e) {
-            log.error("[PoiCsvSync] Erro ao importar POIs do CSV", e);
-            throw new RuntimeException("Erro ao importar POIs do CSV", e);
+            log.error("[PoiCsvSync] Erro ao importar POIs", e);
+            throw new RuntimeException("Erro ao importar POIs", e);
         }
 
-        log.info("[PoiCsvSync] POIs base importados: totalLinhas={}, criados={}", total, created);
         return map;
     }
 
-    // ---------------------------------------------------------
-    // 2) Importar imagens extra (poi_images.csv)
-    // ---------------------------------------------------------
+    /**
+     * Importa imagens extra (poi_images.csv) e anexa a cada POI com base no id lógico do CSV.
+     */
     private void importImages(Resource imagesCsv, Map<Integer, Poi> poiByCsvId) {
         if (imagesCsv == null || !imagesCsv.exists()) {
             log.warn("[PoiCsvSync] CSV de imagens não encontrado ({}), a ignorar.", imagesCsv);
@@ -151,6 +182,7 @@ public class PoiCsvSyncService {
 
         int total = 0;
         int attached = 0;
+        int missingPoi = 0;
 
         try (Reader reader = new BufferedReader(
                 new InputStreamReader(imagesCsv.getInputStream(), StandardCharsets.UTF_8))) {
@@ -164,7 +196,7 @@ public class PoiCsvSyncService {
             for (CSVRecord record : parser) {
                 total++;
 
-                Integer csvId = parseInt(trim(record, "poi_id"));
+                Integer csvId   = parseInt(trim(record, "poi_id"));
                 String imageUrl = trim(record, "image_url");
 
                 if (csvId == null || imageUrl == null || imageUrl.isBlank()) {
@@ -173,8 +205,7 @@ public class PoiCsvSyncService {
 
                 Poi poi = poiByCsvId.get(csvId);
                 if (poi == null) {
-                    // Se não encontrar, é porque o id do CSV não bate certo com o 1º ficheiro
-                    log.warn("[PoiCsvSync] Imagem com poi_id={} mas POI não encontrado (linha {}).", csvId, total);
+                    missingPoi++;
                     continue;
                 }
 
@@ -185,47 +216,47 @@ public class PoiCsvSyncService {
                 if (!images.contains(imageUrl)) {
                     images.add(imageUrl);
                     poi.setImages(images);
-                    // não mexemos em poi.image aqui (main_image já tratada antes)
                     poiRepository.save(poi);
                     attached++;
                 }
             }
 
-        } catch (Exception e) {
-            log.error("[PoiCsvSync] Erro ao importar imagens extra do CSV", e);
-            throw new RuntimeException("Erro ao importar imagens extra do CSV", e);
-        }
+            log.info(
+                    "[PoiCsvSync] Imagens: lidas={} anexadas={} poi_nao_encontrado={}",
+                    total, attached, missingPoi
+            );
 
-        log.info("[PoiCsvSync] Imagens extra: linhasLidas={}, anexadas={}", total, attached);
+        } catch (Exception e) {
+            log.error("[PoiCsvSync] Erro ao importar imagens", e);
+            throw new RuntimeException("Erro ao importar imagens", e);
+        }
     }
 
-    // ---------------------------------------------------------
-    // Helpers
-    // ---------------------------------------------------------
+    // Helpers genéricos
+
     private String trim(CSVRecord record, String header) {
         try {
             String v = record.get(header);
             return v != null ? v.trim() : null;
-        } catch (IllegalArgumentException e) {
+        } catch (Exception e) {
             return null;
         }
     }
 
-    private Integer parseInt(String value) {
-        if (value == null || value.isBlank()) return null;
+    private Integer parseInt(String v) {
+        if (v == null || v.isBlank()) return null;
         try {
-            return Integer.parseInt(value.trim());
-        } catch (NumberFormatException e) {
+            return Integer.parseInt(v.trim());
+        } catch (Exception e) {
             return null;
         }
     }
 
-    private Double parseDouble(String value) {
-        if (value == null || value.isBlank()) return null;
-        String norm = value.replace(",", ".");
+    private Double parseDouble(String v) {
+        if (v == null || v.isBlank()) return null;
         try {
-            return Double.parseDouble(norm);
-        } catch (NumberFormatException e) {
+            return Double.parseDouble(v.trim().replace(",", "."));
+        } catch (Exception e) {
             return null;
         }
     }

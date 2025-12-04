@@ -17,7 +17,6 @@ public class Poi {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // AGORA PERMITE NULL
     @ManyToOne(optional = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "district_id", nullable = true)
     private District district;
@@ -29,7 +28,7 @@ public class Poi {
     private String namePt;
 
     @Column(nullable = false, length = 100)
-    private String category;   // castle / church / park ...
+    private String category;
 
     @Column(length = 100)
     private String subcategory;
@@ -52,17 +51,21 @@ public class Poi {
     @Column(length = 50)
     private String source;
 
+    @Column(columnDefinition = "text")
+    private String architect;
+
+    @Column(name = "year_text", length = 100)
+    private String yearText;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    // IMAGEM PRINCIPAL
     @Column(name = "image", columnDefinition = "text")
     private String image;
 
-    // GALERIA (guardada como string via converter)
     @Column(name = "images", columnDefinition = "text")
     @Convert(converter = StringListConverter.class)
     private List<String> images = new ArrayList<>();
@@ -90,113 +93,67 @@ public class Poi {
         this.id = id;
     }
 
-    public String getName() {
-        return name;
-    }
+    public String getName() { return name; }
 
-    public void setName(String name) {
-        this.name = name;
-    }
+    public void setName(String name) { this.name = name; }
 
-    public String getNamePt() {
-        return namePt;
-    }
+    public String getNamePt() { return namePt; }
 
-    public void setNamePt(String namePt) {
-        this.namePt = namePt;
-    }
+    public void setNamePt(String namePt) { this.namePt = namePt; }
 
-    public String getCategory() {
-        return category;
-    }
+    public String getCategory() { return category; }
 
-    public void setCategory(String category) {
-        this.category = category;
-    }
+    public void setCategory(String category) { this.category = category; }
 
-    public String getSubcategory() {
-        return subcategory;
-    }
+    public String getSubcategory() { return subcategory; }
 
-    public void setSubcategory(String subcategory) {
-        this.subcategory = subcategory;
-    }
+    public void setSubcategory(String subcategory) { this.subcategory = subcategory; }
 
-    public String getDescription() {
-        return description;
-    }
+    public String getDescription() { return description; }
 
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public void setDescription(String description) { this.description = description; }
 
-    public String getWikipediaUrl() {
-        return wikipediaUrl;
-    }
+    public String getWikipediaUrl() { return wikipediaUrl; }
 
-    public void setWikipediaUrl(String wikipediaUrl) {
-        this.wikipediaUrl = wikipediaUrl;
-    }
+    public void setWikipediaUrl(String wikipediaUrl) { this.wikipediaUrl = wikipediaUrl; }
 
-    public String getSipaId() {
-        return sipaId;
-    }
+    public String getSipaId() { return sipaId; }
 
-    public void setSipaId(String sipaId) {
-        this.sipaId = sipaId;
-    }
+    public void setSipaId(String sipaId) { this.sipaId = sipaId; }
 
-    public String getExternalOsmId() {
-        return externalOsmId;
-    }
+    public String getExternalOsmId() { return externalOsmId; }
 
-    public void setExternalOsmId(String externalOsmId) {
-        this.externalOsmId = externalOsmId;
-    }
+    public void setExternalOsmId(String externalOsmId) { this.externalOsmId = externalOsmId; }
 
-    public Double getLat() {
-        return lat;
-    }
+    public Double getLat() { return lat; }
 
-    public void setLat(Double lat) {
-        this.lat = lat;
-    }
+    public void setLat(Double lat) { this.lat = lat; }
 
-    public Double getLon() {
-        return lon;
-    }
+    public Double getLon() { return lon; }
 
-    public void setLon(Double lon) {
-        this.lon = lon;
-    }
+    public void setLon(Double lon) { this.lon = lon; }
 
-    public String getSource() {
-        return source;
-    }
+    public String getSource() { return source; }
 
-    public void setSource(String source) {
-        this.source = source;
-    }
+    public void setSource(String source) { this.source = source; }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
+    public String getArchitect() { return architect; }
 
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    public void setArchitect(String architect) { this.architect = architect; }
 
-    public String getImage() {
-        return image;
-    }
+    public String getYearText() { return yearText; }
 
-    public void setImage(String image) {
-        this.image = image;
-    }
+    public void setYearText(String yearText) { this.yearText = yearText; }
 
-    public List<String> getImages() {
-        return images;
-    }
+    public Instant getCreatedAt() { return createdAt; }
+
+    public Instant getUpdatedAt() { return updatedAt; }
+
+    public String getImage() { return image; }
+
+    public void setImage(String image) { this.image = image; }
+
+    public List<String> getImages() { return images; }
 
     public void setImages(List<String> images) {
         this.images = images != null ? images : new ArrayList<>();

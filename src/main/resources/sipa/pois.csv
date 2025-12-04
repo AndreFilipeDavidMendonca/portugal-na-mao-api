@@ -1,33 +1,3 @@
-PT.DOT Data Generator
-AI-Powered Cultural POI Population Tool
-
-Img Quality
-
-Balanced (600px)
-2005 POIs Generated
-Single Generation
-Solares e Conventos em Viseu
-Generate Single
-Full Country Batch
-Strategy
-
-Enrichment (Exclude Pillories)
-Strictly excludes Fountains/Pillories. Focuses on SIPA IDs for Solares, Bridges, Ermidas.
-
-Start From (Checkpoint)
-
-Aveiro (Step 1)
-Extraction Depth (Per District)
-
-MAXIMUM (All Feasible)
-Splits requests by theme automatically.
-
-Start Full Batch
-Preview
-SQL Script
-CSV Export
-Main Data (Clean)
-Images Relations (DB)
 id,name,name_pt,category,subcategory,architect,year,description,wikipedia_url,sipa_id,lat,lon,source
 1,"Aveiro Cathedral (Church of São Domingos)","Sé de Aveiro (Igreja de São Domingos)","church","Cathedral","Desconhecido","Séc. XV","Originalmente parte de um convento dominicano fundado no século XV, a Sé de Aveiro, ou Igreja de São Domingos, foi elevada a catedral em 1938. Apresenta uma arquitetura que reflete as diversas intervenções ao longo dos séculos, combinando elementos góticos e maneiristas na sua estrutura. Destacam-se o portal principal, o púlpito barroco e os painéis de azulejo no seu interior, que narram episódios bíblicos. A torre sineira é um elemento distintivo no panorama urbano de Aveiro.","","PT020105020005",40.6409,-8.6534,"Batch (enrichment): Aveiro"
 2,"Monastery of Jesus (Convent of Jesus / Aveiro Museum)","Mosteiro de Jesus (Convento de Jesus / Museu de Aveiro)","church","Convent","Vários ao longo dos séculos, incluindo Gaspar Ferreira e António Gomes","1461","Fundado em 1461, este convento feminino da Ordem Dominicana é famoso por ter acolhido a Princesa Santa Joana (filha de D. Afonso V) no século XV. A sua igreja, em estilo barroco, é um dos exemplos mais notáveis da talha dourada no país. O túmulo de Santa Joana, em mármore policromado, é uma obra-prima da escultura barroca. Atualmente, alberga o Museu de Aveiro, que preserva o espólio do convento e arte sacra.","","PT020105020004",40.6404,-8.6546,"Batch (enrichment): Aveiro"

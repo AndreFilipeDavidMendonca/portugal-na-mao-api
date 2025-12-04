@@ -48,8 +48,8 @@ ptdot:
   bootstrap:
     reset-pois: false
     import-district-metadata: false
-    sync-pois-from-csv: false
-    import-district-files: true          # 👈 ativa o import do district_files.csv
+    sync-pois-from-csv: true
+    import-district-files: false          # 👈 ativa o import do district_files.csv
 
   sipa:
     pois-csv-path: "classpath:/sipa/pois.csv"
