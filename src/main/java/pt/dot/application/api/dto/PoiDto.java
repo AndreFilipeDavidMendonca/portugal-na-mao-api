@@ -23,7 +23,6 @@ public class PoiDto {
     private String image;          // imagem principal
     private List<String> images;   // galeria
 
-    public PoiDto() {}
 
     public PoiDto(Long id,
                   Long districtId,
@@ -86,15 +85,6 @@ public class PoiDto {
 
     public Double getLon() { return lon; }
     public void setLon(Double lon) { this.lon = lon; }
-
-    public String getWikipediaUrl() { return wikipediaUrl; }
-    public void setWikipediaUrl(String wikipediaUrl) { this.wikipediaUrl = wikipediaUrl; }
-
-    public String getSipaId() { return sipaId; }
-    public void setSipaId(String sipaId) { this.sipaId = sipaId; }
-
-    public String getExternalOsmId() { return externalOsmId; }
-    public void setExternalOsmId(String externalOsmId) { this.externalOsmId = externalOsmId; }
 
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }

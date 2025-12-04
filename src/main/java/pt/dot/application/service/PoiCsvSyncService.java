@@ -33,7 +33,7 @@ public class PoiCsvSyncService {
      * Lê:
      *  - CSV de POIs (pois_full.csv)
      *  - CSV de imagens extra (poi_images.csv)
-     *
+
      * Cria/actualiza a tabela poi com:
      *  - name/namePt/category/subcategory/description
      *  - wikipediaUrl, sipaId

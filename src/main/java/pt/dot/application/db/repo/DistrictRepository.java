@@ -12,6 +12,4 @@ public interface DistrictRepository extends JpaRepository<District, Long> {
     List<District> findAllByOrderByNameAsc();
 
     Optional<District> findByNamePtIgnoreCase(String namePt);
-
-    Optional<District> findByNameIgnoreCase(String name);
 }
