@@ -23,11 +23,27 @@ public class AppUser {
     @Column(name = "avatar_url", columnDefinition = "text")
     private String avatarUrl;
 
+    @Column(name = "password_hash", nullable = false, length = 255)
+    private String passwordHash;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "role", nullable = false, length = 32)
+    private UserRole role = UserRole.USER;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
+
+    public AppUser() {
+    }
+
+    public AppUser(String email, String passwordHash, UserRole role) {
+        this.email = email;
+        this.passwordHash = passwordHash;
+        this.role = (role != null ? role : UserRole.USER);
+    }
 
     @PreUpdate
     public void touchUpdatedAt() {
@@ -66,6 +82,22 @@ public class AppUser {
 
     public void setAvatarUrl(String avatarUrl) {
         this.avatarUrl = avatarUrl;
+    }
+
+    public String getPasswordHash() {
+        return passwordHash;
+    }
+
+    public void setPasswordHash(String passwordHash) {
+        this.passwordHash = passwordHash;
+    }
+
+    public UserRole getRole() {
+        return role;
+    }
+
+    public void setRole(UserRole role) {
+        this.role = role;
     }
 
     public Instant getCreatedAt() {
