@@ -7,9 +7,8 @@ pt/dot/application/api/dto/LoginRequestDto.class
 pt/dot/application/config/WebClientConfig.class
 pt/dot/application/service/DistrictFilesCsvImportService.class
 pt/dot/application/config/SecurityConfig.class
-pt/dot/application/service/DistrictMetadataImportService.class
+pt/dot/application/service/DistrictFilesCsvImportService$ParsedLine.class
 pt/dot/application/util/PasswordHashUtil.class
-pt/dot/application/DistrictMetadataBootstrap.class
 pt/dot/application/db/entity/District.class
 pt/dot/application/db/entity/UserRole.class
 pt/dot/application/db/entity/Comment.class
@@ -17,9 +16,9 @@ pt/dot/application/config/HttpClientConfig.class
 pt/dot/application/api/dto/DistrictUpdateRequest.class
 pt/dot/application/db/entity/Favorite.class
 pt/dot/application/ApplicationJava.class
+pt/dot/application/service/DistrictFilesBootstrap.class
 pt/dot/application/db/converter/StringListConverter.class
 pt/dot/application/api/AuthController.class
-pt/dot/application/DistrictFilesBootstrap.class
 pt/dot/application/sipa/PoiCsvSyncRunner.class
 pt/dot/application/service/PoiCsvSyncService.class
 pt/dot/application/api/dto/DistrictDto.class
@@ -28,6 +27,7 @@ pt/dot/application/config/CacheConfig.class
 pt/dot/application/db/entity/MediaItem.class
 pt/dot/application/db/repo/DistrictRepository.class
 pt/dot/application/api/DistrictController.class
+pt/dot/application/service/DistrictFilesCsvImportService$ImportResult.class
 pt/dot/application/service/PoiService.class
 pt/dot/application/db/entity/Poi.class
 pt/dot/application/config/CorsConfig.class

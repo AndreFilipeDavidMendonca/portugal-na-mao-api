@@ -17,7 +17,6 @@ public class HttpClientConfig {
         return builder
                 .defaultHeader(
                         HttpHeaders.USER_AGENT,
-                        // <-- mete aqui algo teu, identificável
                         "ptdot-monumentos-proxy/1.0 (https://teu-site-ou-github; contacto: teu-email)"
                 )
                 .setConnectTimeout(Duration.ofSeconds(5))

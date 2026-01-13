@@ -1,6 +1,4 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/ApplicationJava.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/DistrictFilesBootstrap.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/DistrictMetadataBootstrap.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/AuthController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/DistrictController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/PoiController.java
@@ -25,8 +23,8 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/AppUserRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/DistrictRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiRepository.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesBootstrap.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesCsvImportService.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictMetadataImportService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiCsvSyncService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/sipa/PoiCsvSyncRunner.java

@@ -47,11 +47,10 @@ logging:
 ptdot:
   bootstrap:
     reset-pois: false
-    import-district-metadata: false
+    import-district-files: false
     sync-pois-from-csv: false
-    import-district-files: false          # 👈 ativa o import do district_files.csv
 
   sipa:
     pois-csv-path: "classpath:/sipa/pois.csv"
     poi-images-csv-path: "classpath:/sipa/poi_images.csv"
-    district-files-csv-path: "classpath:/db/sipa/district_files.csv" # ou /sipa/, conforme tiveres o ficheiro
+    district-files-csv-path: "classpath:/db/sipa/district_files.csv"

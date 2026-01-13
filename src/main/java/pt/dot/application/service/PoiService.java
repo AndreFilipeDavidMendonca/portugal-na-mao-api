@@ -20,51 +20,35 @@ public class PoiService {
         this.poiRepository = poiRepository;
     }
 
-    // ---------- LISTAGENS / LEITURA ----------
+    // ---------- READ ----------
 
     public List<PoiDto> findAll() {
-        return poiRepository.findAll()
-                .stream()
-                .map(this::toDto)
-                .toList();
+        return poiRepository.findAll().stream().map(this::toDto).toList();
     }
 
     public Optional<PoiDto> findById(Long id) {
-        return poiRepository.findById(id)
-                .map(this::toDto);
+        return poiRepository.findById(id).map(this::toDto);
     }
 
-    // ---------- UPDATE (PATCH COM PoiDto) ----------
+    // ---------- PATCH UPDATE ----------
 
     public Optional<PoiDto> updatePoi(Long id, PoiDto dto) {
         return poiRepository.findById(id).map(poi -> {
-
-            // Só atualiza o que vier != null
-            if (dto.getName() != null) {
-                poi.setName(dto.getName());
-            }
-            if (dto.getNamePt() != null) {
-                poi.setNamePt(dto.getNamePt());
-            }
-            if (dto.getDescription() != null) {
-                poi.setDescription(dto.getDescription());
-            }
-            if (dto.getImage() != null) {
-                poi.setImage(dto.getImage());
-            }
-            if (dto.getImages() != null) {
-                poi.setImages(dto.getImages());
-            }
-
-            // Se no futuro quiseres permitir edição de mais campos,
-            // é só ir acrescentando aqui com o mesmo padrão.
-
+            applyPatch(poi, dto);
             Poi saved = poiRepository.save(poi);
             return toDto(saved);
         });
     }
 
-    // ---------- MAPPER ENTITY -> DTO ----------
+    private void applyPatch(Poi poi, PoiDto dto) {
+        if (dto.getName() != null) poi.setName(dto.getName());
+        if (dto.getNamePt() != null) poi.setNamePt(dto.getNamePt());
+        if (dto.getDescription() != null) poi.setDescription(dto.getDescription());
+        if (dto.getImage() != null) poi.setImage(dto.getImage());
+        if (dto.getImages() != null) poi.setImages(dto.getImages());
+    }
+
+    // ---------- MAPPER ----------
 
     private PoiDto toDto(Poi p) {
         Long districtId = (p.getDistrict() != null ? p.getDistrict().getId() : null);

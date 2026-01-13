@@ -15,41 +15,48 @@ public class PoiCsvSyncRunner implements CommandLineRunner {
 
     private static final Logger log = LoggerFactory.getLogger(PoiCsvSyncRunner.class);
 
-    @Value("${ptdot.bootstrap.sync-pois-from-csv:false}")
-    private boolean syncPoisFromCsv;
-
-    @Value("${ptdot.sipa.pois-csv-path:classpath:/sipa/pois_full.csv}")
-    private String poisCsvPath;
-
-    @Value("${ptdot.sipa.poi-images-csv-path:classpath:/sipa/poi_images.csv}")
-    private String poiImagesCsvPath;
-
     private final PoiCsvSyncService poiCsvSyncService;
     private final ResourceLoader resourceLoader;
 
-    public PoiCsvSyncRunner(PoiCsvSyncService poiCsvSyncService,
-                            ResourceLoader resourceLoader) {
+    private final boolean syncPoisFromCsv;
+    private final String poisCsvPath;
+    private final String poiImagesCsvPath;
+
+    public PoiCsvSyncRunner(
+            PoiCsvSyncService poiCsvSyncService,
+            ResourceLoader resourceLoader,
+            @Value("${ptdot.bootstrap.sync-pois-from-csv:false}") boolean syncPoisFromCsv,
+            @Value("${ptdot.sipa.pois-csv-path:classpath:/sipa/pois.csv}") String poisCsvPath,
+            @Value("${ptdot.sipa.poi-images-csv-path:classpath:/sipa/poi_images.csv}") String poiImagesCsvPath
+    ) {
         this.poiCsvSyncService = poiCsvSyncService;
         this.resourceLoader = resourceLoader;
+        this.syncPoisFromCsv = syncPoisFromCsv;
+        this.poisCsvPath = poisCsvPath;
+        this.poiImagesCsvPath = poiImagesCsvPath;
     }
 
     @Override
     public void run(String... args) {
         if (!syncPoisFromCsv) {
-            log.info("[POI-CSV] Flag ptdot.bootstrap.sync-pois-from-csv=false, a saltar sync.");
+            log.info("[POI-CSV] sync desativado (ptdot.bootstrap.sync-pois-from-csv=false).");
             return;
         }
 
+        Resource poisResource = resourceLoader.getResource(poisCsvPath);
+        Resource imagesResource = resourceLoader.getResource(poiImagesCsvPath);
+
+        if (!poisResource.exists()) {
+            log.error("[POI-CSV] CSV de POIs não encontrado: {}", poisCsvPath);
+            return;
+        }
+
+        log.info("[POI-CSV] Sync a partir de POIs='{}' e imagens='{}'", poisCsvPath, poiImagesCsvPath);
+
         try {
-            Resource poisResource = resourceLoader.getResource(poisCsvPath);
-            Resource imagesResource = resourceLoader.getResource(poiImagesCsvPath);
-
-            log.info("[POI-CSV] A carregar POIs de '{}'", poisCsvPath);
-            log.info("[POI-CSV] A carregar imagens extra de '{}'", poiImagesCsvPath);
-
             poiCsvSyncService.syncFromCsv(poisResource, imagesResource);
         } catch (Exception e) {
-            log.error("[POI-CSV] Erro no runner de sync de POIs a partir dos CSVs", e);
+            log.error("[POI-CSV] Falha no sync a partir de CSV", e);
         }
     }
 }
