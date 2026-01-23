@@ -17,6 +17,21 @@ public class AppUser {
     @Column(nullable = false, unique = true, length = 255)
     private String email;
 
+    @Column(name = "first_name", length = 120)
+    private String firstName;
+
+    @Column(name = "last_name", length = 120)
+    private String lastName;
+
+    @Column(name = "age")
+    private Integer age;
+
+    @Column(name = "nationality", length = 120)
+    private String nationality;
+
+    @Column(name = "phone", length = 50)
+    private String phone;
+
     @Column(name = "display_name", length = 255)
     private String displayName;
 
@@ -36,77 +51,52 @@ public class AppUser {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    public AppUser() {
-    }
-
-    public AppUser(String email, String passwordHash, UserRole role) {
-        this.email = email;
-        this.passwordHash = passwordHash;
-        this.role = (role != null ? role : UserRole.USER);
-    }
+    public AppUser() {}
 
     @PreUpdate
     public void touchUpdatedAt() {
         this.updatedAt = Instant.now();
     }
 
-    // getters/setters
+    // ---------------- Getters / Setters ----------------
 
-    public UUID getId() {
-        return id;
-    }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
 
-    public void setId(UUID id) {
-        this.id = id;
-    }
+    public String getEmail() { return email; }
+    public void setEmail(String email) { this.email = email; }
 
-    public String getEmail() {
-        return email;
-    }
+    public String getFirstName() { return firstName; }
+    public void setFirstName(String firstName) { this.firstName = firstName; }
 
-    public void setEmail(String email) {
-        this.email = email;
-    }
+    public String getLastName() { return lastName; }
+    public void setLastName(String lastName) { this.lastName = lastName; }
 
-    public String getDisplayName() {
-        return displayName;
-    }
+    public Integer getAge() { return age; }
+    public void setAge(Integer age) { this.age = age; }
 
-    public void setDisplayName(String displayName) {
-        this.displayName = displayName;
-    }
+    public String getNationality() { return nationality; }
+    public void setNationality(String nationality) { this.nationality = nationality; }
 
-    public String getAvatarUrl() {
-        return avatarUrl;
-    }
+    public String getPhone() { return phone; }
+    public void setPhone(String phone) { this.phone = phone; }
 
-    public void setAvatarUrl(String avatarUrl) {
-        this.avatarUrl = avatarUrl;
-    }
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
 
-    public String getPasswordHash() {
-        return passwordHash;
-    }
+    public String getAvatarUrl() { return avatarUrl; }
+    public void setAvatarUrl(String avatarUrl) { this.avatarUrl = avatarUrl; }
 
-    public void setPasswordHash(String passwordHash) {
-        this.passwordHash = passwordHash;
-    }
+    public String getPasswordHash() { return passwordHash; }
+    public void setPasswordHash(String passwordHash) { this.passwordHash = passwordHash; }
 
-    public UserRole getRole() {
-        return role;
-    }
+    public UserRole getRole() { return role; }
+    public void setRole(UserRole role) { this.role = role; }
 
-    public void setRole(UserRole role) {
-        this.role = role;
-    }
+    public Instant getCreatedAt() { return createdAt; }
+    public Instant getUpdatedAt() { return updatedAt; }
 
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
-
-    public Instant getUpdatedAt() {
-        return updatedAt;
-    }
+    // ---------------- equals/hashCode ----------------
 
     @Override
     public boolean equals(Object o) {

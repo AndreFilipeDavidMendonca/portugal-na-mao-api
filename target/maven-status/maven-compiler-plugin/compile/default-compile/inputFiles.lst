@@ -7,11 +7,9 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/DistrictUpdateRequest.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/LoginRequestDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiDto.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/CacheConfig.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/RegisterRequestDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/CorsConfig.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/HttpClientConfig.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/SecurityConfig.java
-/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/WebClientConfig.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/converter/StringListConverter.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/AppUser.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/Comment.java

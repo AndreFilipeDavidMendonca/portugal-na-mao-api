@@ -27,7 +27,7 @@ public class Favorite {
     @Column(name = "created_at", nullable = false, updatable = false)
     private Instant createdAt = Instant.now();
 
-    // getters/setters
+    public Favorite() {}
 
     public Long getId() {
         return id;
