@@ -45,11 +45,8 @@ public class FavoriteService {
 
     @Transactional
     public FavoriteDto add(UUID userId, Long poiId) {
-        // idempotente
         var existing = favoriteRepository.findByUser_IdAndPoi_Id(userId, poiId);
-        if (existing.isPresent()) {
-            return toDto(existing.get());
-        }
+        if (existing.isPresent()) return toDto(existing.get());
 
         AppUser user = appUserRepository.findById(userId)
                 .orElseThrow(() -> new IllegalStateException("User não encontrado"));
@@ -61,8 +58,7 @@ public class FavoriteService {
         f.setUser(user);
         f.setPoi(poi);
 
-        Favorite saved = favoriteRepository.save(f);
-        return toDto(saved);
+        return toDto(favoriteRepository.save(f));
     }
 
     @Transactional
@@ -77,56 +73,55 @@ public class FavoriteService {
             favoriteRepository.delete(existing.get());
             return false;
         }
-
         add(userId, poiId);
         return true;
     }
 
-    // =========================
-    // mapping helpers
-    // =========================
+    // =====================
+    // Mapping
+    // =====================
     private FavoriteDto toDto(Favorite f) {
         Poi p = f.getPoi();
-
-        String name = pickBestName(p);
-        String image = pickBestImage(p);
-
         return new FavoriteDto(
                 p.getId(),
-                name,
-                image,
+                pickBestName(p),
+                pickBestImage(p),
                 f.getCreatedAt()
         );
     }
 
     private String pickBestName(Poi p) {
         try {
-            String namePt = p.getNamePt();
-            if (namePt != null && !namePt.isBlank()) return namePt.trim();
-        } catch (Exception ignored) { }
+            String pt = p.getNamePt();
+            if (pt != null && !pt.isBlank()) return pt.trim();
+        } catch (Exception ignored) {}
 
         try {
             String name = p.getName();
             if (name != null && !name.isBlank()) return name.trim();
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {}
 
         return "POI";
     }
 
     private String pickBestImage(Poi p) {
-        try {
-            String image = p.getImage();
-            if (image != null && !image.isBlank()) return image.trim();
-        } catch (Exception ignored) { }
+        // 1️⃣ imagem principal
+        if (p.getImage() != null && !p.getImage().isBlank()) {
+            return p.getImage().trim();
+        }
 
+        // 2️⃣ primeira imagem da galeria
         try {
-            var images = p.getImages(); // List<String> (assumido)
+            var images = p.getImages(); // List<String>
             if (images != null && !images.isEmpty()) {
                 String first = images.get(0);
-                if (first != null && !first.isBlank()) return first.trim();
+                if (first != null && !first.isBlank()) {
+                    return first.trim();
+                }
             }
-        } catch (Exception ignored) { }
+        } catch (Exception ignored) {}
 
+        // 3️⃣ sem imagem
         return null;
     }
 }

@@ -79,7 +79,14 @@ public class AuthController {
                 u.getEmail(),
                 u.getDisplayName(),
                 u.getAvatarUrl(),
-                u.getRole().name()
+                u.getRole().name(),
+
+                // campos extra
+                u.getFirstName(),
+                u.getLastName(),
+                u.getAge(),
+                u.getNationality(),
+                u.getPhone()
         );
     }
 }
