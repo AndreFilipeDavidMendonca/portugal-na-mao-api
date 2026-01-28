@@ -33,8 +33,6 @@ public class PoiDto {
     private String image;
     private List<String> images;
 
-    public PoiDto() {}
-
     public PoiDto(
             Long id,
             Long districtId,

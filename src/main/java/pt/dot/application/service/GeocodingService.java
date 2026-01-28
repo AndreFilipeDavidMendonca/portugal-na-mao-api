@@ -177,18 +177,6 @@ public class GeocodingService {
        Helpers
     ========================= */
 
-    public static String cacheKey(GeocodeRequestDto req) {
-        if (req == null) return "null";
-        return String.join("|",
-                norm(req.getStreet()),
-                norm(req.getHouseNumber()),
-                norm(req.getPostalCode()),
-                norm(req.getCity()),
-                norm(req.getDistrict()),
-                norm(req.getCountry()).isBlank() ? "Portugal" : norm(req.getCountry())
-        );
-    }
-
     private static String norm(String s) {
         if (s == null) return "";
         String x = s.trim();

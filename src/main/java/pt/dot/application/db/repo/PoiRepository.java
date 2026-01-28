@@ -10,12 +10,8 @@ import java.util.UUID;
 
 public interface PoiRepository extends JpaRepository<Poi, Long> {
 
-    // ✅ Comerciais: “os meus”
     List<Poi> findByOwner_Id(UUID ownerId);
 
-    // ✅ Não-comerciais: SIPA
     Optional<Poi> findBySipaId(String sipaId);
 
-    // (opcional, mas recomendo)
-    Optional<Poi> findByExternalOsmId(String externalOsmId);
 }

@@ -37,8 +37,7 @@ public class Favorite {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof Favorite)) return false;
-        Favorite favorite = (Favorite) o;
+        if (!(o instanceof Favorite favorite)) return false;
         return Objects.equals(id, favorite.id);
     }
 

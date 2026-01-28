@@ -62,10 +62,9 @@ public class AuthController {
 
         // role: default USER; accepts BUSINESS
         UserRole role = UserRole.USER;
-        if (body.getRole() != null && body.getRole().trim().length() > 0) {
+        if (body.getRole() != null && !body.getRole().trim().isEmpty()) {
             String r = body.getRole().trim().toUpperCase();
             if ("BUSINESS".equals(r)) role = UserRole.BUSINESS;
-            else if ("USER".equals(r)) role = UserRole.USER;
         }
         user.setRole(role);
 
