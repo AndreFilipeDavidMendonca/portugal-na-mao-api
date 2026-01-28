@@ -1,20 +1,23 @@
 package pt.dot.application.api.dto;
 
+import lombok.Getter;
+
 import java.util.UUID;
 
+@Getter
 public class CurrentUserDto {
 
-    private UUID id;
-    private String email;
-    private String displayName;
-    private String avatarUrl;
-    private String role;
+    private final UUID id;
+    private final String email;
+    private final String displayName;
+    private final String avatarUrl;
+    private final String role;
 
-    private String firstName;
-    private String lastName;
-    private Integer age;
-    private String nationality;
-    private String phone;
+    private final String firstName;
+    private final String lastName;
+    private final Integer age;
+    private final String nationality;
+    private final String phone;
 
     public CurrentUserDto(
             UUID id,
@@ -40,15 +43,4 @@ public class CurrentUserDto {
         this.phone = phone;
     }
 
-    public UUID getId() { return id; }
-    public String getEmail() { return email; }
-    public String getDisplayName() { return displayName; }
-    public String getAvatarUrl() { return avatarUrl; }
-    public String getRole() { return role; }
-
-    public String getFirstName() { return firstName; }
-    public String getLastName() { return lastName; }
-    public Integer getAge() { return age; }
-    public String getNationality() { return nationality; }
-    public String getPhone() { return phone; }
 }

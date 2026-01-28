@@ -1,10 +1,13 @@
 package pt.dot.application.db.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.Instant;
 import java.util.Objects;
 
+@Getter
 @Entity
 @Table(
         name = "favorite",
@@ -16,10 +19,12 @@ public class Favorite {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Setter
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private AppUser user;
 
+    @Setter
     @ManyToOne(optional = false, fetch = FetchType.LAZY)
     @JoinColumn(name = "poi_id", nullable = false)
     private Poi poi;
@@ -28,30 +33,6 @@ public class Favorite {
     private Instant createdAt = Instant.now();
 
     public Favorite() {}
-
-    public Long getId() {
-        return id;
-    }
-
-    public AppUser getUser() {
-        return user;
-    }
-
-    public void setUser(AppUser user) {
-        this.user = user;
-    }
-
-    public Poi getPoi() {
-        return poi;
-    }
-
-    public void setPoi(Poi poi) {
-        this.poi = poi;
-    }
-
-    public Instant getCreatedAt() {
-        return createdAt;
-    }
 
     @Override
     public boolean equals(Object o) {
