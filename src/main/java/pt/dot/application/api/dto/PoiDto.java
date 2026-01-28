@@ -2,11 +2,16 @@
 package pt.dot.application.api.dto;
 
 import java.util.List;
+import java.util.UUID;
 
 public class PoiDto {
 
     private Long id;
     private Long districtId;
+
+    // ✅ novo
+    private UUID ownerId;
+
     private String name;
     private String namePt;
     private String category;
@@ -14,34 +19,38 @@ public class PoiDto {
     private String description;
     private Double lat;
     private Double lon;
+
     private String wikipediaUrl;
     private String sipaId;
     private String externalOsmId;
     private String source;
 
-    // fotos
-    private String image;          // imagem principal
-    private List<String> images;   // galeria
+    private String image;
+    private List<String> images;
 
+    public PoiDto() {}
 
-    public PoiDto(Long id,
-                  Long districtId,
-                  String name,
-                  String namePt,
-                  String category,
-                  String subcategory,
-                  String description,
-                  Double lat,
-                  Double lon,
-                  String wikipediaUrl,
-                  String sipaId,
-                  String externalOsmId,
-                  String source,
-                  String image,
-                  List<String> images) {
-
+    public PoiDto(
+            Long id,
+            Long districtId,
+            UUID ownerId,
+            String name,
+            String namePt,
+            String category,
+            String subcategory,
+            String description,
+            Double lat,
+            Double lon,
+            String wikipediaUrl,
+            String sipaId,
+            String externalOsmId,
+            String source,
+            String image,
+            List<String> images
+    ) {
         this.id = id;
         this.districtId = districtId;
+        this.ownerId = ownerId;
         this.name = name;
         this.namePt = namePt;
         this.category = category;
@@ -57,13 +66,14 @@ public class PoiDto {
         this.images = images;
     }
 
-    // GETTERS & SETTERS
-
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
     public Long getDistrictId() { return districtId; }
     public void setDistrictId(Long districtId) { this.districtId = districtId; }
+
+    public UUID getOwnerId() { return ownerId; }
+    public void setOwnerId(UUID ownerId) { this.ownerId = ownerId; }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
@@ -85,6 +95,15 @@ public class PoiDto {
 
     public Double getLon() { return lon; }
     public void setLon(Double lon) { this.lon = lon; }
+
+    public String getWikipediaUrl() { return wikipediaUrl; }
+    public void setWikipediaUrl(String wikipediaUrl) { this.wikipediaUrl = wikipediaUrl; }
+
+    public String getSipaId() { return sipaId; }
+    public void setSipaId(String sipaId) { this.sipaId = sipaId; }
+
+    public String getExternalOsmId() { return externalOsmId; }
+    public void setExternalOsmId(String externalOsmId) { this.externalOsmId = externalOsmId; }
 
     public String getSource() { return source; }
     public void setSource(String source) { this.source = source; }

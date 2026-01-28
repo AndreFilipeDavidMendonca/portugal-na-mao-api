@@ -1,11 +1,28 @@
 server:
   port: 8085
 
+  # ✅ permite requests maiores (base64/images em JSON)
+  tomcat:
+    max-swallow-size: 20MB
+
+  # (opcional mas recomendado) compressão das respostas
+  compression:
+    enabled: true
+    min-response-size: 1024
+    mime-types: application/json,text/plain,text/html,text/xml,text/css,application/javascript
+
 spring:
   application:
     name: monumentos-proxy
+
   main:
     web-application-type: servlet
+
+  # ✅ limites de upload/request (mesmo que não uses multipart agora, é útil)
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 20MB
 
   datasource:
     url: jdbc:postgresql://localhost:5432/pt_dot
@@ -15,7 +32,7 @@ spring:
 
   jpa:
     hibernate:
-      ddl-auto: update        # em produção provavelmente vais querer "validate"
+      ddl-auto: update
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
@@ -26,11 +43,25 @@ spring:
     init:
       mode: never
 
+  cache:
+    type: caffeine
+
+# -------------------------------
+# Geocoding (Nominatim)
+# -------------------------------
+app:
+  geocoding:
+    nominatim:
+      base-url: "https://nominatim.openstreetmap.org"
+      user-agent: "pt-dot-app/1.0 (contact: dev@pt-dot.local)"
+    cache:
+      ttl-seconds: 604800 # 7 dias
+
 monumentos:
   base-url: "http://servicos.dgterritorio.pt/SDISNITZWMS_SIPA_PPP_IHRU/service.svc/get"
   wfs:
-    type-name: "SIPA:Patrimonio"   # AJUSTAR com o typeName real do GetCapabilities
-    srs-name: "EPSG:4326"          # usamos WGS84 para bater com lat/lon do OSM
+    type-name: "SIPA:Patrimonio"
+    srs-name: "EPSG:4326"
 
 dot:
   osm:
@@ -41,9 +72,6 @@ logging:
     pt.dot.application.service: DEBUG
     pt.dot.application.monumentos: DEBUG
 
-# -------------------------------
-# BOOTSTRAP .PT (controla a BD)
-# -------------------------------
 ptdot:
   bootstrap:
     reset-pois: false

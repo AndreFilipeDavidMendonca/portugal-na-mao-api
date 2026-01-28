@@ -10,6 +10,9 @@ public class RegisterRequestDto {
     private String phone;
     private String password;
 
+    /** "USER" | "BUSINESS" (case-insensitive) */
+    private String role;
+
     public RegisterRequestDto() {}
 
     public String getFirstName() { return firstName; }
@@ -32,4 +35,7 @@ public class RegisterRequestDto {
 
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
 }

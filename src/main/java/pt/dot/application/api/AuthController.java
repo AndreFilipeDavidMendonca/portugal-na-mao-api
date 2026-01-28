@@ -2,11 +2,14 @@ package pt.dot.application.api;
 
 import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.web.bind.annotation.*;
+
 import pt.dot.application.api.dto.CurrentUserDto;
 import pt.dot.application.api.dto.LoginRequestDto;
+import pt.dot.application.api.dto.RegisterRequestDto;
 import pt.dot.application.db.entity.AppUser;
+import pt.dot.application.db.entity.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
 
 import java.util.Optional;
@@ -28,6 +31,54 @@ public class AuthController {
 
     public AuthController(AppUserRepository userRepository) {
         this.userRepository = userRepository;
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<CurrentUserDto> register(
+            @RequestBody RegisterRequestDto body,
+            HttpSession session
+    ) {
+        if (body.getEmail() == null || body.getPassword() == null) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        final String email = body.getEmail().trim();
+        if (email.isEmpty()) return ResponseEntity.badRequest().build();
+
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            return ResponseEntity.status(409).build();
+        }
+
+        AppUser user = new AppUser();
+        user.setEmail(email.toLowerCase());
+
+        user.setFirstName(trimOrNull(body.getFirstName()));
+        user.setLastName(trimOrNull(body.getLastName()));
+        user.setAge(body.getAge());
+        user.setNationality(trimOrNull(body.getNationality()));
+        user.setPhone(trimOrNull(body.getPhone()));
+
+        user.setPasswordHash(passwordEncoder.encode(body.getPassword()));
+
+        // role: default USER; accepts BUSINESS
+        UserRole role = UserRole.USER;
+        if (body.getRole() != null && body.getRole().trim().length() > 0) {
+            String r = body.getRole().trim().toUpperCase();
+            if ("BUSINESS".equals(r)) role = UserRole.BUSINESS;
+            else if ("USER".equals(r)) role = UserRole.USER;
+        }
+        user.setRole(role);
+
+        // displayName: "First Last" fallback email prefix
+        String display = buildDisplayName(user.getFirstName(), user.getLastName(), user.getEmail());
+        user.setDisplayName(display);
+
+        AppUser saved = userRepository.save(user);
+
+        // login automático
+        session.setAttribute(AuthSession.SESSION_USER_ID, saved.getId());
+
+        return ResponseEntity.ok(toDto(saved));
     }
 
     @PostMapping("/login")
@@ -81,12 +132,30 @@ public class AuthController {
                 u.getAvatarUrl(),
                 u.getRole().name(),
 
-                // campos extra
                 u.getFirstName(),
                 u.getLastName(),
                 u.getAge(),
                 u.getNationality(),
                 u.getPhone()
         );
+    }
+
+    private static String trimOrNull(String s) {
+        if (s == null) return null;
+        String t = s.trim();
+        return t.isEmpty() ? null : t;
+    }
+
+    private static String buildDisplayName(String first, String last, String email) {
+        String a = first != null ? first.trim() : "";
+        String b = last != null ? last.trim() : "";
+        String name = (a + " " + b).trim();
+        if (!name.isEmpty()) return name;
+
+        if (email != null) {
+            int at = email.indexOf("@");
+            if (at > 0) return email.substring(0, at);
+        }
+        return "Utilizador";
     }
 }

@@ -58,8 +58,6 @@ public class AppUser {
         this.updatedAt = Instant.now();
     }
 
-    // ---------------- Getters / Setters ----------------
-
     public UUID getId() { return id; }
     public void setId(UUID id) { this.id = id; }
 
@@ -95,8 +93,6 @@ public class AppUser {
 
     public Instant getCreatedAt() { return createdAt; }
     public Instant getUpdatedAt() { return updatedAt; }
-
-    // ---------------- equals/hashCode ----------------
 
     @Override
     public boolean equals(Object o) {

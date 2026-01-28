@@ -31,17 +31,19 @@
 
     <dependencies>
 
-        <!-- ========= Spring Web ========= -->
+        <!-- ========= Spring Web (Servlet) ========= -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
         </dependency>
 
-        <!-- Se usas WebClient/Reactor, mantém. Se não, remove. -->
+        <!-- Se usas WebClient/Reactor, mantém. Se não, remove para evitar dependências extra. -->
+        <!--
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-webflux</artifactId>
         </dependency>
+        -->
 
         <dependency>
             <groupId>org.springframework.boot</groupId>
@@ -71,13 +73,12 @@
             <artifactId>caffeine</artifactId>
         </dependency>
 
-        <!-- ========= Security (precisas disto p/ HttpSecurity, SecurityFilterChain, etc.) ========= -->
+        <!-- ========= Security ========= -->
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-security</artifactId>
         </dependency>
 
-        <!-- (Opcional) BCrypt e afins -->
         <dependency>
             <groupId>org.springframework.security</groupId>
             <artifactId>spring-security-crypto</artifactId>
@@ -129,12 +130,6 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
-
-        <dependency>
-            <groupId>io.projectreactor</groupId>
-            <artifactId>reactor-test</artifactId>
             <scope>test</scope>
         </dependency>
 
