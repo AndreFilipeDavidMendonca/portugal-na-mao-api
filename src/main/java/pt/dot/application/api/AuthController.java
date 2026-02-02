@@ -17,13 +17,7 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(
-        origins = {
-                "http://localhost:5173",
-                "http://localhost:5174"
-        },
-        allowCredentials = "true"
-)
+
 public class AuthController {
 
     private final AppUserRepository userRepository;

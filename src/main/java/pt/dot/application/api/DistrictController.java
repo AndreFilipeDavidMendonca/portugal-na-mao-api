@@ -14,12 +14,7 @@ import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(
-        origins = {
-                "http://localhost:5173",
-                "http://localhost:5174"
-        }
-)
+
 public class DistrictController {
 
     private final DistrictRepository districtRepository;
