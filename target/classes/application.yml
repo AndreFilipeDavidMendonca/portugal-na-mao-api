@@ -57,15 +57,6 @@ app:
     cache:
       ttl-seconds: 604800 # 7 dias
 
-monumentos:
-  base-url: "http://servicos.dgterritorio.pt/SDISNITZWMS_SIPA_PPP_IHRU/service.svc/get"
-  wfs:
-    type-name: "SIPA:Patrimonio"
-    srs-name: "EPSG:4326"
-
-dot:
-  osm:
-    import-on-startup: false
 
 logging:
   level:
