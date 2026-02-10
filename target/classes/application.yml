@@ -1,11 +1,20 @@
 server:
-  port: 8085
+  port: ${PORT:8085}
 
-  # ✅ permite requests maiores (base64/images em JSON)
+  # importante em plataformas tipo Vercel (proxy à frente)
+  forward-headers-strategy: framework
+
   tomcat:
     max-swallow-size: 20MB
 
-  # (opcional mas recomendado) compressão das respostas
+  servlet:
+    session:
+      cookie:
+        name: PTDOTSESSION
+        http-only: true
+        secure: true
+        same-site: none
+
   compression:
     enabled: true
     min-response-size: 1024
@@ -18,26 +27,26 @@ spring:
   main:
     web-application-type: servlet
 
-  # ✅ limites de upload/request (mesmo que não uses multipart agora, é útil)
   servlet:
     multipart:
       max-file-size: 10MB
       max-request-size: 20MB
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/pt_dot
-    username: ptdot_user
-    password: ptdot_pass
+    # em produção no Vercel vais pôr estes env vars
+    url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/pt_dot}
+    username: ${JDBC_DATABASE_USERNAME:ptdot_user}
+    password: ${JDBC_DATABASE_PASSWORD:ptdot_pass}
     driver-class-name: org.postgresql.Driver
 
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: true
+    show-sql: ${SHOW_SQL:false}
 
   sql:
     init:
@@ -46,30 +55,26 @@ spring:
   cache:
     type: caffeine
 
-# -------------------------------
-# Geocoding (Nominatim)
-# -------------------------------
 app:
   geocoding:
     nominatim:
-      base-url: "https://nominatim.openstreetmap.org"
-      user-agent: "pt-dot-app/1.0 (contact: dev@pt-dot.local)"
+      base-url: ${NOMINATIM_BASE_URL:https://nominatim.openstreetmap.org}
+      user-agent: "${NOMINATIM_USER_AGENT:pt-dot-app/1.0 (contact: dev@pt-dot.local)}"
     cache:
-      ttl-seconds: 604800 # 7 dias
-
+      ttl-seconds: 604800
 
 logging:
   level:
-    pt.dot.application.service: DEBUG
-    pt.dot.application.monumentos: DEBUG
+    pt.dot.application.service: ${LOG_LEVEL_SERVICE:INFO}
+    pt.dot.application.monumentos: ${LOG_LEVEL_MONUMENTOS:INFO}
 
 ptdot:
   bootstrap:
-    reset-pois: false
-    import-district-files: false
-    sync-pois-from-csv: false
+    reset-pois: ${PTDOT_RESET_POIS:false}
+    import-district-files: ${PTDOT_IMPORT_DISTRICT_FILES:false}
+    sync-pois-from-csv: ${PTDOT_SYNC_POIS_FROM_CSV:true}
 
   sipa:
-    pois-csv-path: "classpath:/sipa/pois.csv"
-    poi-images-csv-path: "classpath:/sipa/poi_images.csv"
-    district-files-csv-path: "classpath:/db/sipa/district_files.csv"
+    pois-csv-path: ${PTDOT_SIPA_POIS_CSV_PATH:classpath:/sipa/pois.csv}
+    poi-images-csv-path: ${PTDOT_SIPA_POI_IMAGES_CSV_PATH:classpath:/sipa/poi_images.csv}
+    district-files-csv-path: ${PTDOT_SIPA_DISTRICT_FILES_CSV_PATH:classpath:/db/sipa/district_files.csv}
