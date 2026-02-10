@@ -1,7 +1,9 @@
 package pt.dot.application.service;
 
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.server.ResponseStatusException;
 import pt.dot.application.api.dto.FavoriteDto;
 import pt.dot.application.db.entity.AppUser;
 import pt.dot.application.db.entity.Favorite;
@@ -12,6 +14,8 @@ import pt.dot.application.db.repo.PoiRepository;
 
 import java.util.List;
 import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 public class FavoriteService {
@@ -30,21 +34,33 @@ public class FavoriteService {
         this.poiRepository = poiRepository;
     }
 
-    @Transactional(readOnly = true)
-    public boolean isFavorite(UUID userId, Long poiId) {
-        return favoriteRepository.existsByUser_IdAndPoi_Id(userId, poiId);
+    private UUID requireUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(UNAUTHORIZED);
+        }
+
+        return (UUID) auth.getPrincipal();
     }
 
     @Transactional(readOnly = true)
-    public List<FavoriteDto> list(UUID userId) {
-        return favoriteRepository.findAllByUser_IdOrderByCreatedAtDesc(userId)
+    public boolean isFavorite(Long poiId) {
+        return favoriteRepository.existsByUser_IdAndPoi_Id(requireUserId(), poiId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<FavoriteDto> list() {
+        return favoriteRepository.findAllByUser_IdOrderByCreatedAtDesc(requireUserId())
                 .stream()
                 .map(this::toDto)
                 .toList();
     }
 
     @Transactional
-    public FavoriteDto add(UUID userId, Long poiId) {
+    public FavoriteDto add(Long poiId) {
+
+        UUID userId = requireUserId();
+
         var existing = favoriteRepository.findByUser_IdAndPoi_Id(userId, poiId);
         if (existing.isPresent()) return toDto(existing.get());
 
@@ -62,66 +78,31 @@ public class FavoriteService {
     }
 
     @Transactional
-    public void remove(UUID userId, Long poiId) {
-        favoriteRepository.deleteByUser_IdAndPoi_Id(userId, poiId);
+    public void remove(Long poiId) {
+        favoriteRepository.deleteByUser_IdAndPoi_Id(requireUserId(), poiId);
     }
 
     @Transactional
-    public boolean toggle(UUID userId, Long poiId) {
+    public boolean toggle(Long poiId) {
+        UUID userId = requireUserId();
+
         var existing = favoriteRepository.findByUser_IdAndPoi_Id(userId, poiId);
         if (existing.isPresent()) {
             favoriteRepository.delete(existing.get());
             return false;
         }
-        add(userId, poiId);
+
+        add(poiId);
         return true;
     }
 
-    // =====================
-    // Mapping
-    // =====================
     private FavoriteDto toDto(Favorite f) {
         Poi p = f.getPoi();
         return new FavoriteDto(
                 p.getId(),
-                pickBestName(p),
-                pickBestImage(p),
+                p.getNamePt() != null ? p.getNamePt() : p.getName(),
+                p.getImage(),
                 f.getCreatedAt()
         );
-    }
-
-    private String pickBestName(Poi p) {
-        try {
-            String pt = p.getNamePt();
-            if (pt != null && !pt.isBlank()) return pt.trim();
-        } catch (Exception ignored) {}
-
-        try {
-            String name = p.getName();
-            if (name != null && !name.isBlank()) return name.trim();
-        } catch (Exception ignored) {}
-
-        return "POI";
-    }
-
-    private String pickBestImage(Poi p) {
-        // 1️⃣ imagem principal
-        if (p.getImage() != null && !p.getImage().isBlank()) {
-            return p.getImage().trim();
-        }
-
-        // 2️⃣ primeira imagem da galeria
-        try {
-            var images = p.getImages(); // List<String>
-            if (images != null && !images.isEmpty()) {
-                String first = images.get(0);
-                if (first != null && !first.isBlank()) {
-                    return first.trim();
-                }
-            }
-        } catch (Exception ignored) {}
-
-        // 3️⃣ sem imagem
-        return null;
     }
 }

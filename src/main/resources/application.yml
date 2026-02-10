@@ -7,13 +7,10 @@ server:
   tomcat:
     max-swallow-size: 20MB
 
+
   servlet:
     session:
-      cookie:
-        name: PTDOTSESSION
-        http-only: true
-        secure: true
-        same-site: none
+      tracking-modes: cookie
 
   compression:
     enabled: true
@@ -69,6 +66,10 @@ logging:
     pt.dot.application.monumentos: ${LOG_LEVEL_MONUMENTOS:INFO}
 
 ptdot:
+  jwt:
+    secret: ${PTDOT_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS}
+    issuer: ${PTDOT_JWT_ISSUER:ptdot}
+    accessTokenMinutes: ${PTDOT_JWT_ACCESS_MINUTES:60}
   bootstrap:
     reset-pois: ${PTDOT_RESET_POIS:false}
     import-district-files: ${PTDOT_IMPORT_DISTRICT_FILES:false}

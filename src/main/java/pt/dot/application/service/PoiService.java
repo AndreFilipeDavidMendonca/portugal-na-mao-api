@@ -1,11 +1,8 @@
-// src/main/java/pt/dot/application/service/PoiService.java
 package pt.dot.application.service;
 
-import jakarta.servlet.http.HttpSession;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import pt.dot.application.api.AuthSession;
 import pt.dot.application.api.dto.CreatePoiRequestDto;
 import pt.dot.application.api.dto.PoiDto;
 import pt.dot.application.db.entity.AppUser;
@@ -13,6 +10,7 @@ import pt.dot.application.db.entity.Poi;
 import pt.dot.application.db.entity.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
 import pt.dot.application.db.repo.PoiRepository;
+import pt.dot.application.security.SecurityUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -37,20 +35,17 @@ public class PoiService {
        READ
     ============================ */
 
-    /** Lista tudo (leve): SEM galeria */
     @Transactional(readOnly = true)
     public List<PoiDto> findAll() {
         return poiRepository.findAll().stream().map(this::toDtoList).toList();
     }
 
-    /** Detalhe por ID: COM galeria */
     @Transactional(readOnly = true)
     public Optional<PoiDto> findById(Long id) {
         if (id == null) return Optional.empty();
         return poiRepository.findById(id).map(this::toDtoDetail);
     }
 
-    /** Detalhe por SIPA ID: COM galeria */
     @Transactional(readOnly = true)
     public Optional<PoiDto> findBySipaId(String sipaId) {
         String sid = safe(sipaId);
@@ -58,10 +53,9 @@ public class PoiService {
         return poiRepository.findBySipaId(sid).map(this::toDtoDetail);
     }
 
-    /** Meus POIs (leve): SEM galeria */
     @Transactional(readOnly = true)
-    public List<PoiDto> findMine(HttpSession session) {
-        AppUser me = requireMe(session);
+    public List<PoiDto> findMine() {
+        AppUser me = requireMe();
         return poiRepository.findByOwner_Id(me.getId()).stream().map(this::toDtoList).toList();
     }
 
@@ -69,13 +63,8 @@ public class PoiService {
        CREATE (comercial)
     ============================ */
 
-    /**
-     * Cria POI comercial (owner != null).
-     * Requer role BUSINESS ou ADMIN.
-     * Retorna apenas o ID (para o FE navegar para o detalhe).
-     */
-    public Long createBusinessPoi(CreatePoiRequestDto req, HttpSession session) {
-        AppUser me = requireBusinessOrAdmin(session);
+    public Long createBusinessPoi(CreatePoiRequestDto req) {
+        AppUser me = requireBusinessOrAdmin();
         if (req == null) throw new ResponseStatusException(BAD_REQUEST, "Body em falta");
 
         String name = safe(req.getName());
@@ -110,19 +99,39 @@ public class PoiService {
        UPDATE
     ============================ */
 
-    public Optional<PoiDto> updatePoi(Long id, PoiDto dto, HttpSession session) {
+    public Optional<PoiDto> updatePoi(Long id, PoiDto dto) {
         if (id == null) return Optional.empty();
 
         return poiRepository.findById(id).map(poi -> {
-            // só valida permissões se for comercial
             if (poi.getOwner() != null) {
-                requireOwnerOrAdmin(session, poi);
+                requireOwnerOrAdmin(poi);
             }
-
             applyPatch(poi, dto);
             return toDtoDetail(poiRepository.save(poi));
         });
     }
+
+    /* ============================
+       DELETE (comercial)
+    ============================ */
+
+    public void deleteBusinessPoi(Long id) {
+        if (id == null) throw new ResponseStatusException(BAD_REQUEST, "ID em falta");
+
+        Poi poi = poiRepository.findById(id)
+                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "POI não encontrado"));
+
+        if (poi.getOwner() == null) {
+            throw new ResponseStatusException(FORBIDDEN, "Apenas POIs comerciais podem ser eliminados");
+        }
+
+        requireOwnerOrAdmin(poi);
+        poiRepository.delete(poi);
+    }
+
+    /* ============================
+       PATCH
+    ============================ */
 
     private void applyPatch(Poi poi, PoiDto dto) {
         if (dto == null) return;
@@ -133,25 +142,19 @@ public class PoiService {
 
         if (dto.getCategory() != null) poi.setCategory(dto.getCategory());
 
-        // lat/lon só se for comercial
         if (poi.getOwner() != null) {
             if (dto.getLat() != null) poi.setLat(dto.getLat());
             if (dto.getLon() != null) poi.setLon(dto.getLon());
         }
 
-        // galeria: sanitiza sempre que vem do FE
         if (dto.getImages() != null) {
             List<String> images = normalizeImages(dto.getImages());
             poi.setImages(images);
-
-            // se a primary não veio, ou ficou inválida, tenta alinhar com a galeria
             poi.setImage(normalizePrimaryImage(poi.getImage(), images));
         }
 
-        // primary image explícita (prioridade maior)
         if (dto.getImage() != null) {
             String image = safeNull(dto.getImage());
-            // se vier vazia/null mas a galeria existir, escolhe a 1ª
             poi.setImage(normalizePrimaryImage(image, poi.getImages()));
         }
     }
@@ -160,7 +163,6 @@ public class PoiService {
        DTO MAPPERS
     ============================ */
 
-    /** Listagem (leve): images = null */
     private PoiDto toDtoList(Poi p) {
         IdPair ids = idsOf(p);
 
@@ -184,7 +186,6 @@ public class PoiService {
         );
     }
 
-    /** Detalhe: images incluído */
     private PoiDto toDtoDetail(Poi p) {
         IdPair ids = idsOf(p);
 
@@ -217,25 +218,26 @@ public class PoiService {
     }
 
     /* ============================
-       AUTH HELPERS
+       AUTH HELPERS (JWT)
     ============================ */
 
-    private AppUser requireMe(HttpSession session) {
-        UUID userId = (UUID) session.getAttribute(AuthSession.SESSION_USER_ID);
+    private AppUser requireMe() {
+        UUID userId = SecurityUtil.getUserIdOrNull();
         if (userId == null) throw new ResponseStatusException(UNAUTHORIZED);
+
         return userRepository.findById(userId)
                 .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED));
     }
 
-    private AppUser requireBusinessOrAdmin(HttpSession session) {
-        AppUser me = requireMe(session);
+    private AppUser requireBusinessOrAdmin() {
+        AppUser me = requireMe();
         if (me.getRole() == UserRole.ADMIN) return me;
         if (me.getRole() == UserRole.BUSINESS) return me;
         throw new ResponseStatusException(FORBIDDEN, "Apenas contas comerciais podem criar POIs");
     }
 
-    private void requireOwnerOrAdmin(HttpSession session, Poi poi) {
-        AppUser me = requireMe(session);
+    private void requireOwnerOrAdmin(Poi poi) {
+        AppUser me = requireMe();
 
         boolean isAdmin = me.getRole() == UserRole.ADMIN;
         boolean isOwner = poi.getOwner() != null
@@ -263,7 +265,6 @@ public class PoiService {
     private static List<String> normalizeImages(List<String> images) {
         if (images == null || images.isEmpty()) return new ArrayList<>();
 
-        // trim + remove vazios + remove duplicados preservando ordem
         List<String> out = new ArrayList<>();
         for (String it : images) {
             String v = safeNull(it);
@@ -273,10 +274,6 @@ public class PoiService {
         return out;
     }
 
-    /**
-     * Regra: se primary for null/vazia => usa 1ª da galeria (se existir).
-     * Se primary existir mas não houver galeria, mantém.
-     */
     private static String normalizePrimaryImage(String primary, List<String> gallery) {
         String p = safeNull(primary);
         if (p != null) return p;
@@ -288,26 +285,5 @@ public class PoiService {
             }
         }
         return null;
-    }
-
-    /* ============================
-   DELETE (comercial)
-============================ */
-
-    public void deleteBusinessPoi(Long id, HttpSession session) {
-        if (id == null) throw new ResponseStatusException(BAD_REQUEST, "ID em falta");
-
-        Poi poi = poiRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "POI não encontrado"));
-
-        // ✅ só comerciais
-        if (poi.getOwner() == null) {
-            throw new ResponseStatusException(FORBIDDEN, "Apenas POIs comerciais podem ser eliminados");
-        }
-
-        // ✅ só owner ou ADMIN
-        requireOwnerOrAdmin(session, poi);
-
-        poiRepository.delete(poi);
     }
 }

@@ -1,10 +1,9 @@
 package pt.dot.application.service;
 
-import jakarta.servlet.http.HttpSession;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
-import pt.dot.application.api.AuthSession;
 import pt.dot.application.api.dto.CreatePoiCommentRequest;
 import pt.dot.application.api.dto.PoiCommentDto;
 import pt.dot.application.db.entity.AppUser;
@@ -31,9 +30,32 @@ public class PoiCommentService {
         this.userRepo = userRepo;
     }
 
+    private UUID requireUserId() {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !auth.isAuthenticated() || auth.getPrincipal() == null) {
+            throw new ResponseStatusException(UNAUTHORIZED);
+        }
+        return (UUID) auth.getPrincipal();
+    }
+
+    private AppUser requireMe() {
+        UUID userId = requireUserId();
+        return userRepo.findById(userId)
+                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED));
+    }
+
+    private AppUser tryGetMeOrNull() {
+        try {
+            UUID userId = requireUserId();
+            return userRepo.findById(userId).orElse(null);
+        } catch (Exception ignore) {
+            return null;
+        }
+    }
+
     @Transactional(readOnly = true)
-    public List<PoiCommentDto> listByPoi(long poiId, HttpSession session) {
-        AppUser me = tryGetMe(session);
+    public List<PoiCommentDto> listByPoi(long poiId) {
+        AppUser me = tryGetMeOrNull();
 
         return commentRepo.findByPoiIdOrderByCreatedAtDesc(poiId)
                 .stream()
@@ -42,8 +64,8 @@ public class PoiCommentService {
     }
 
     @Transactional
-    public PoiCommentDto add(long poiId, CreatePoiCommentRequest req, HttpSession session) {
-        AppUser me = requireMe(session);
+    public PoiCommentDto add(long poiId, CreatePoiCommentRequest req) {
+        AppUser me = requireMe();
 
         String body = (req == null || req.body() == null) ? "" : req.body().trim();
         if (body.isBlank()) throw new ResponseStatusException(BAD_REQUEST, "Comentário vazio");
@@ -59,8 +81,8 @@ public class PoiCommentService {
     }
 
     @Transactional
-    public void delete(long commentId, HttpSession session) {
-        AppUser me = requireMe(session);
+    public void delete(long commentId) {
+        AppUser me = requireMe();
 
         PoiComment c = commentRepo.findById(commentId)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Comentário não encontrado"));
@@ -73,24 +95,6 @@ public class PoiCommentService {
         }
 
         commentRepo.delete(c);
-    }
-
-    /* ================= helpers ================= */
-
-    private AppUser requireMe(HttpSession session) {
-        UUID userId = (UUID) session.getAttribute(AuthSession.SESSION_USER_ID);
-        if (userId == null) throw new ResponseStatusException(UNAUTHORIZED);
-
-        return userRepo.findById(userId)
-                .orElseThrow(() -> new ResponseStatusException(UNAUTHORIZED));
-    }
-
-    private AppUser tryGetMe(HttpSession session) {
-        try {
-            return requireMe(session);
-        } catch (Exception ignore) {
-            return null;
-        }
     }
 
     private PoiCommentDto toDto(PoiComment c, AppUser meOrNull) {
@@ -113,7 +117,6 @@ public class PoiCommentService {
     }
 
     private String safeAuthorName(AppUser u) {
-        // prioridade: displayName -> first+last -> email prefix -> "Utilizador"
         String dn = u.getDisplayName() == null ? "" : u.getDisplayName().trim();
         if (!dn.isEmpty()) return dn;
 
