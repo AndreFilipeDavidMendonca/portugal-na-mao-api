@@ -65,7 +65,11 @@ public class SecurityConfig {
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration cfg = new CorsConfiguration();
 
-        cfg.setAllowedOrigins(List.of("http://localhost:5173"));
+        cfg.setAllowedOriginPatterns(List.of(
+                "http://localhost:5173",
+                "https://portugal-na-mao.vercel.app",
+                "https://*.vercel.app"
+        ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
 
         // alguns browsers mandam "authorization" em minúsculas no preflight
