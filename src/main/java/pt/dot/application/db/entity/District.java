@@ -113,8 +113,6 @@ public class District {
     public List<String> getFiles() { return files; }
     public void setFiles(List<String> files) { this.files = files; }
 
-    public List<String> getSources() { return files; }
-    public void setSources(List<String> files) { this.files = files; }
-
-
+    public List<String> getSources() { return sources; }
+    public void setSources(List<String> sources) { this.sources = sources; }
 }

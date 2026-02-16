@@ -2,10 +2,12 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/AuthController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/AuthSession.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/DistrictController.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/DistrictPoiController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/FavoriteController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/GeocodingController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/PoiCommentController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/PoiController.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/SearchController.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/AuthResponseDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CreatePoiCommentRequest.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CreatePoiRequestDto.java
@@ -19,7 +21,9 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/LoginRequestDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiCommentDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiDto.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiLiteDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/RegisterRequestDto.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/SearchItemDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/GeocodingConfig.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/converter/StringListConverter.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/AppUser.java
@@ -33,6 +37,7 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/DistrictRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/FavoriteRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiCommentRepository.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiLiteView.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/JwtAuthFilter.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/JwtService.java
@@ -40,10 +45,12 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/SecurityUtil.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesBootstrap.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesCsvImportService.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictPoiQueryService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/FavoriteService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/GeocodingService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiCommentService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiCsvSyncService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiService.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/service/SearchService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/sipa/PoiCsvSyncRunner.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/util/PasswordHashUtil.java
