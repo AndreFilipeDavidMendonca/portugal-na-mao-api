@@ -22,6 +22,7 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiCommentDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiLiteDto.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiLiteResponseDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/RegisterRequestDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/SearchItemDto.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/config/GeocodingConfig.java

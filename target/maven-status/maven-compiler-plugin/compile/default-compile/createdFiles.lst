@@ -64,3 +64,4 @@ pt/dot/application/security/JwtService.class
 pt/dot/application/api/dto/GeocodeRequestDto.class
 pt/dot/application/api/GeocodingController.class
 pt/dot/application/api/dto/FavoriteDto.class
+pt/dot/application/api/dto/PoiLiteResponseDto.class
