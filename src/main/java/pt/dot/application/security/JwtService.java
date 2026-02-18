@@ -1,4 +1,3 @@
-// src/main/java/pt/dot/application/security/JwtService.java
 package pt.dot.application.security;
 
 import io.jsonwebtoken.Claims;
@@ -22,7 +21,7 @@ public class JwtService {
     private final long ttlSeconds;
 
     public JwtService(
-            @Value("${ptdot.jwt.secret:change-me-please-change-me-please-change-me-please}") String secret,
+            @Value("${ptdot.jwt.secret:please-change-me-please-change-me-please-change-me-please}") String secret,
             @Value("${ptdot.jwt.ttl-seconds:1209600}") long ttlSeconds
     ) {
         this.key = Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
@@ -58,7 +57,7 @@ public class JwtService {
             String role = roleObj != null ? roleObj.toString() : "USER";
 
             return new JwtPrincipal(userId, role);
-        } catch (Exception e) {
+        } catch (Exception ignored) {
             return null;
         }
     }

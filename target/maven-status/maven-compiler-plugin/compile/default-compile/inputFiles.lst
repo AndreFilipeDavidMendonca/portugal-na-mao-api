@@ -40,6 +40,7 @@
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiCommentRepository.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiLiteView.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiRepository.java
+/Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/DisableJwtFilterAutoRegistration.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/JwtAuthFilter.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/JwtService.java
 /Users/andre.mendonca/Documents/portugal-na-mao-api/src/main/java/pt/dot/application/security/SecurityConfig.java

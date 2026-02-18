@@ -1,4 +1,3 @@
-// src/main/java/pt/dot/application/security/SecurityConfig.java
 package pt.dot.application.security;
 
 import org.springframework.context.annotation.Bean;
@@ -15,42 +14,30 @@ import java.util.List;
 @Configuration
 public class SecurityConfig {
 
-    private final JwtAuthFilter jwtAuthFilter;
-
-    public SecurityConfig(JwtAuthFilter jwtAuthFilter) {
-        this.jwtAuthFilter = jwtAuthFilter;
+    @Bean
+    public JwtAuthFilter jwtAuthFilter(JwtService jwtService) {
+        return new JwtAuthFilter(jwtService);
     }
 
     @Bean
-    SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
                 .cors(cors -> {})
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(fl -> fl.disable())
                 .httpBasic(hb -> hb.disable())
-                .exceptionHandling(eh -> eh
-                        .authenticationEntryPoint((req, res, ex) -> res.sendError(401))
-                )
+                .exceptionHandling(eh -> eh.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
                 .authorizeHttpRequests(auth -> auth
-                        // preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
-                        // auth público
                         .requestMatchers(HttpMethod.POST, "/api/login", "/api/register").permitAll()
-
-                        // público
                         .requestMatchers(HttpMethod.GET, "/api/pois/**", "/api/districts/**").permitAll()
 
-                        // comments:
-                        // GET público
                         .requestMatchers(HttpMethod.GET, "/api/pois/*/comments").permitAll()
-                        // POST autenticado
                         .requestMatchers(HttpMethod.POST, "/api/pois/*/comments").authenticated()
-                        // DELETE autenticado
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
 
-                        // autenticado
                         .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
                         .requestMatchers("/api/favorites/**").authenticated()
 
@@ -71,12 +58,8 @@ public class SecurityConfig {
                 "https://*.vercel.app"
         ));
         cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-
-        // alguns browsers mandam "authorization" em minúsculas no preflight
         cfg.setAllowedHeaders(List.of("Authorization", "authorization", "Content-Type"));
-        cfg.setExposedHeaders(List.of("Authorization"));
-
-        // token = sem cookies
+        cfg.setExposedHeaders(List.of("Authorization", "X-Debug-JWT"));
         cfg.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

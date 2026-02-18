@@ -16,6 +16,7 @@ pt/dot/application/api/FavoriteController.class
 pt/dot/application/security/SecurityUtil.class
 pt/dot/application/db/converter/StringListConverter.class
 pt/dot/application/api/AuthController.class
+pt/dot/application/security/DisableJwtFilterAutoRegistration.class
 pt/dot/application/api/PoiCommentController.class
 pt/dot/application/api/SearchController.class
 pt/dot/application/service/GeocodingService$NominatimResult.class
