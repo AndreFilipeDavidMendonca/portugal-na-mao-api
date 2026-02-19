@@ -29,6 +29,7 @@ pt/dot/application/service/GeocodingService$NominatimAddress.class
 pt/dot/application/service/GeocodingService$1Scored.class
 pt/dot/application/db/repo/PoiRepository.class
 pt/dot/application/db/entity/AppUser.class
+pt/dot/application/db/entity/PoiImage.class
 pt/dot/application/service/DistrictFilesCsvImportService.class
 pt/dot/application/service/PoiCommentService.class
 pt/dot/application/service/DistrictFilesCsvImportService$ParsedLine.class
@@ -42,6 +43,7 @@ pt/dot/application/service/SearchService.class
 pt/dot/application/db/entity/Favorite.class
 pt/dot/application/ApplicationJava.class
 pt/dot/application/service/DistrictFilesBootstrap.class
+pt/dot/application/db/repo/PoiImageRepository.class
 pt/dot/application/api/dto/GeocodeResponseDto.class
 pt/dot/application/security/JwtAuthFilter.class
 pt/dot/application/api/AuthController$AuthResponse.class

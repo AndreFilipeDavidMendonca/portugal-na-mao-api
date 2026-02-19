@@ -10,6 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.dot.application.db.entity.Poi;
+import pt.dot.application.db.entity.PoiImage;
 import pt.dot.application.db.repo.PoiRepository;
 
 import java.io.BufferedReader;
@@ -32,7 +33,7 @@ public class PoiCsvSyncService {
     @Transactional
     public void syncFromCsv(Resource poisCsv, Resource imagesCsv) {
         if (poisCsv == null || !poisCsv.exists()) {
-            throw new IllegalArgumentException("CSV de POIs não encontrado: " + poisCsv);
+            throw new IllegalArgumentException("CSV de POIs não encontrado: " + safeName(poisCsv));
         }
 
         log.info("[PoiCsvSync] Início | poisCsv={} | imagesCsv={}", safeName(poisCsv), safeName(imagesCsv));
@@ -104,7 +105,6 @@ public class PoiCsvSyncService {
 
                 poi.setName(name);
                 poi.setNamePt(!isBlank(namePt) ? namePt : name);
-
                 poi.setCategory(category);
                 poi.setSubcategory(subcategory);
                 poi.setDescription(description);
@@ -122,18 +122,11 @@ public class PoiCsvSyncService {
                 poi.setYearText(yearText);
 
                 toSave.add(poi);
-
-                // associação csvId -> poi (depois de salvar, fazemos map com o "saved")
-                // por enquanto guardamos o csvId num map auxiliar
                 csvIdToPoi.put(csvId, poi);
             }
 
-            // save batch (1 roundtrip grande)
-            List<Poi> saved = poiRepository.saveAll(toSave);
+            poiRepository.saveAll(toSave);
 
-            // IMPORTANT: o map csvIdToPoi já aponta para os objetos que foram saved (mesmas referências),
-            // mas para ser super explícito, garantimos que estão “managed”.
-            // (Não precisamos de re-map por índice; o JPA mantém identidade no mesmo contexto)
             log.info("[PoiCsvSync] POIs | lidos={} | criados={} | atualizados={} | ignorados={}",
                     total, created, updated, skipped);
 
@@ -153,7 +146,7 @@ public class PoiCsvSyncService {
 
         int total = 0, attached = 0, missingPoi = 0, skipped = 0;
 
-        // batch: acumulamos alterações por POI e fazemos saveAll no fim
+        // touched -> vamos saveAll no fim (cascade trata das imagens)
         Set<Poi> touched = new HashSet<>();
 
         try (Reader reader = new BufferedReader(
@@ -183,22 +176,36 @@ public class PoiCsvSyncService {
                     continue;
                 }
 
-                // mantém ordem e evita duplicados
-                LinkedHashSet<String> set = new LinkedHashSet<>();
-                if (poi.getImages() != null) set.addAll(poi.getImages());
-                set.add(imageUrl);
+                // dedupe por "data" (aqui é URL do csv, mas funciona igual para base64)
+                LinkedHashSet<String> merged = new LinkedHashSet<>();
+                if (poi.getImages() != null) {
+                    for (PoiImage img : poi.getImages()) {
+                        if (img != null && !isBlank(img.getData())) merged.add(img.getData());
+                    }
+                }
+                merged.add(imageUrl);
 
                 int before = poi.getImages() != null ? poi.getImages().size() : 0;
-                List<String> newList = new ArrayList<>(set);
 
-                if (newList.size() != before) {
-                    poi.setImages(newList);
-                    touched.add(poi);
-                    attached++;
+                // se não mudou, ignora
+                if (merged.size() == before) continue;
+
+                // substitui a coleção (orphanRemoval apaga as antigas)
+                poi.clearImages();
+                int pos = 0;
+                for (String data : merged) {
+                    PoiImage img = new PoiImage();
+                    img.setPosition(pos++);
+                    img.setData(data);
+                    poi.addImage(img);
                 }
+
+                touched.add(poi);
+                attached++;
             }
 
             if (!touched.isEmpty()) {
+                // cascade ALL + orphanRemoval -> persiste imagens automaticamente
                 poiRepository.saveAll(touched);
             }
 

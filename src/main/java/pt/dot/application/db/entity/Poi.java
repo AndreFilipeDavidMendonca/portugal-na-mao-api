@@ -85,21 +85,27 @@ public class Poi {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    @Setter
-    @Column(name = "image", columnDefinition = "text")
-    private String image;
-
-    @Column(name = "images", columnDefinition = "text")
-    @Convert(converter = StringListConverter.class)
-    private List<String> images = new ArrayList<>();
+    @OneToMany(
+            mappedBy = "poi",
+            cascade = CascadeType.ALL,
+            orphanRemoval = true,
+            fetch = FetchType.LAZY
+    )
+    @OrderBy("position ASC")
+    private List<PoiImage> images = new ArrayList<>();
 
     @PreUpdate
     public void touchUpdatedAt() {
         this.updatedAt = Instant.now();
     }
 
-    public void setImages(List<String> images) {
-        this.images = images != null ? images : new ArrayList<>();
+    public void addImage(PoiImage img) {
+        img.setPoi(this);
+        this.images.add(img);
+    }
+
+    public void clearImages() {
+        this.images.clear();
     }
 
     @Override

@@ -70,4 +70,11 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
             @Param("minLon") double minLon,
             @Param("maxLon") double maxLon
     );
+
+    @Query("""
+    select p from Poi p
+    left join fetch p.images
+    where p.id = :id
+""")
+    Optional<Poi> findByIdWithImages(@Param("id") Long id);
 }

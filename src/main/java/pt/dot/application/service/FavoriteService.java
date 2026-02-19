@@ -98,10 +98,14 @@ public class FavoriteService {
 
     private FavoriteDto toDto(Favorite f) {
         Poi p = f.getPoi();
+        String image = null;
+        if (p.getImages() != null && !p.getImages().isEmpty()) {
+            image = p.getImages().get(0).getData();
+        }
         return new FavoriteDto(
                 p.getId(),
                 p.getNamePt() != null ? p.getNamePt() : p.getName(),
-                p.getImage(),
+                image,
                 f.getCreatedAt()
         );
     }
