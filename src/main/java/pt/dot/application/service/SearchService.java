@@ -1,6 +1,5 @@
 package pt.dot.application.service;
 
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.dot.application.api.dto.SearchItemDto;
@@ -19,7 +18,8 @@ public class SearchService {
     private final DistrictRepository districtRepository;
     private final PoiRepository poiRepository;
 
-    public SearchService(DistrictRepository districtRepository, PoiRepository poiRepository) {
+    public SearchService(DistrictRepository districtRepository,
+                         PoiRepository poiRepository) {
         this.districtRepository = districtRepository;
         this.poiRepository = poiRepository;
     }
@@ -28,25 +28,32 @@ public class SearchService {
         String q = (qRaw == null ? "" : qRaw.trim());
         if (q.length() < 2) return List.of();
 
-        int safeLimit = Math.max(1, Math.min(limit, 20)); // hard cap p/ não abusar
+        int safeLimit = Math.max(1, Math.min(limit, 20)); // hard cap
 
-        // split simples: metade distritos, metade pois (podes ajustar)
+        // split simples: metade distritos, metade POIs
         int limDistricts = Math.max(1, safeLimit / 2);
         int limPois = safeLimit - limDistricts;
 
-        List<District> ds = districtRepository.searchByName(q, PageRequest.of(0, limDistricts));
-        List<Poi> ps = poiRepository.searchByName(q, PageRequest.of(0, limPois));
+        List<District> ds = districtRepository.searchByName(q, limDistricts);
+        List<Poi> ps = poiRepository.searchByName(q, limPois);
 
         List<SearchItemDto> out = new ArrayList<>(safeLimit);
 
         for (District d : ds) {
-            String name = d.getNamePt() != null && !d.getNamePt().isBlank() ? d.getNamePt() : d.getName();
+            String name = (d.getNamePt() != null && !d.getNamePt().isBlank())
+                    ? d.getNamePt()
+                    : d.getName();
+
             out.add(new SearchItemDto("district", d.getId(), name, null));
         }
 
         for (Poi p : ps) {
-            String name = (p.getNamePt() != null && !p.getNamePt().isBlank()) ? p.getNamePt() : p.getName();
-            Long districtId = (p.getDistrict() != null ? p.getDistrict().getId() : null);
+            String name = (p.getNamePt() != null && !p.getNamePt().isBlank())
+                    ? p.getNamePt()
+                    : p.getName();
+
+            Long districtId = (p.getDistrict() != null) ? p.getDistrict().getId() : null;
+
             out.add(new SearchItemDto("poi", p.getId(), name, districtId));
         }
 

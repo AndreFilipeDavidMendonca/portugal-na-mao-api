@@ -16,11 +16,13 @@ public interface DistrictRepository extends JpaRepository<District, Long> {
 
     Optional<District> findByNamePtIgnoreCase(String namePt);
 
-    @Query("""
-        select d from District d
-        where lower(coalesce(d.namePt, d.name)) like lower(concat('%', :q, '%'))
-           or lower(d.name) like lower(concat('%', :q, '%'))
-           or lower(coalesce(d.namePt, '')) like lower(concat('%', :q, '%'))
-        """)
-    List<District> searchByName(@Param("q") String q, Pageable pageable);
+    @Query(value = """
+  select *
+  from district d
+  where unaccent(lower(coalesce(d.name_pt, d.name))) like concat('%%', unaccent(lower(:q)), '%%')
+     or unaccent(lower(coalesce(d.name, ''))) like concat('%%', unaccent(lower(:q)), '%%')
+  order by coalesce(d.name_pt, d.name) asc
+  limit :limit
+""", nativeQuery = true)
+    List<District> searchByName(@Param("q") String q, @Param("limit") int limit);
 }

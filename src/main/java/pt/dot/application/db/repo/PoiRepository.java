@@ -17,15 +17,18 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
 
     List<Poi> findByOwner_Id(UUID ownerId);
 
-    @Query("""
-        select p from Poi p
-        where lower(coalesce(p.namePt, p.name)) like lower(concat('%', :q, '%'))
-           or lower(p.name) like lower(concat('%', :q, '%'))
-        order by
-          case when lower(coalesce(p.namePt, p.name)) like lower(concat(:q, '%')) then 0 else 1 end,
-          coalesce(p.namePt, p.name) asc
-        """)
-    List<Poi> searchByName(@Param("q") String q, Pageable pageable);
+    // -------------------------
+    // SEARCH (unaccent + contains + limit)
+    // -------------------------
+    @Query(value = """
+      select *
+      from poi p
+      where unaccent(lower(coalesce(p.name_pt, p.name))) like concat('%%', unaccent(lower(:q)), '%%')
+         or unaccent(lower(coalesce(p.name, ''))) like concat('%%', unaccent(lower(:q)), '%%')
+      order by coalesce(p.name_pt, p.name) asc
+      limit :limit
+    """, nativeQuery = true)
+    List<Poi> searchByName(@Param("q") String q, @Param("limit") int limit);
 
     // -------------------------
     // LITE markers (bbox + category opcional)
@@ -72,9 +75,9 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
     );
 
     @Query("""
-    select p from Poi p
-    left join fetch p.images
-    where p.id = :id
-""")
+        select p from Poi p
+        left join fetch p.images
+        where p.id = :id
+    """)
     Optional<Poi> findByIdWithImages(@Param("id") Long id);
 }
