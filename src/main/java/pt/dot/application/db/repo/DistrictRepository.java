@@ -15,6 +15,8 @@ public interface DistrictRepository extends JpaRepository<District, Long> {
 
     Optional<District> findByNamePtIgnoreCase(String namePt);
 
+    Optional<District> findByCodeIgnoreCase(String code);
+
     @Query(value = """
       select *
       from district d
@@ -23,5 +25,6 @@ public interface DistrictRepository extends JpaRepository<District, Long> {
       order by coalesce(d.name_pt, d.name) asc
       limit :limit
     """, nativeQuery = true)
+
     List<District> searchByName(@Param("q") String q, @Param("limit") int limit);
 }

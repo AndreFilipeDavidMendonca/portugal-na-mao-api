@@ -73,10 +73,12 @@ ptdot:
     accessTokenMinutes: ${PTDOT_JWT_ACCESS_MINUTES:60}
   bootstrap:
     reset-pois: ${PTDOT_RESET_POIS:false}
+    import-districts: ${PTDOT_IMPORT_DISTRICTS:true}
     import-district-files: ${PTDOT_IMPORT_DISTRICT_FILES:false}
     sync-pois-from-csv: ${PTDOT_SYNC_POIS_FROM_CSV:false}
 
   sipa:
     pois-csv-path: ${PTDOT_SIPA_POIS_CSV_PATH:classpath:/sipa/pois.csv}
     poi-images-csv-path: ${PTDOT_SIPA_POI_IMAGES_CSV_PATH:classpath:/sipa/poi_images.csv}
-    district-files-csv-path: ${PTDOT_SIPA_DISTRICT_FILES_CSV_PATH:classpath:/db/sipa/district_files.csv}
+    districts-csv-path: ${PTDOT_SIPA_DISTRICTS_CSV_PATH:classpath:/sipa/districts.csv}
+    district-files-csv-path: ${PTDOT_SIPA_DISTRICT_FILES_CSV_PATH:classpath:/sipa/district_files.csv}

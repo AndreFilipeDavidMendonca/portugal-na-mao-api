@@ -1,6 +1,9 @@
 // src/main/java/pt/dot/application/service/DistrictFilesCsvImportService.java
 package pt.dot.application.service;
 
+import org.apache.commons.csv.CSVFormat;
+import org.apache.commons.csv.CSVParser;
+import org.apache.commons.csv.CSVRecord;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,23 +15,11 @@ import pt.dot.application.db.entity.District;
 import pt.dot.application.db.repo.DistrictRepository;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
+import java.io.Reader;
 import java.nio.charset.StandardCharsets;
 import java.util.*;
 
-/**
- * Importa ficheiros (URLs/paths) para District.files a partir de um CSV.
- *
- * Formato esperado (mínimo 2 colunas):
- *   districtNamePt ; fileUrl
- * ou
- *   districtNamePt , fileUrl
- *
- * - ignora linhas vazias e comentários (#...)
- * - ignora o header (primeira linha) se detetar "district" ou "name" etc.
- * - tolera colunas extra (usa só as 2 primeiras)
- */
 @Service
 public class DistrictFilesCsvImportService {
 
@@ -41,7 +32,7 @@ public class DistrictFilesCsvImportService {
     public DistrictFilesCsvImportService(
             DistrictRepository districtRepository,
             ResourceLoader resourceLoader,
-            @Value("${ptdot.sipa.district-files-csv-path:classpath:/db/sipa/district_files.csv}") String csvPath
+            @Value("${ptdot.sipa.district-files-csv-path:classpath:/sipa/district_files.csv}") String csvPath
     ) {
         this.districtRepository = districtRepository;
         this.resourceLoader = resourceLoader;
@@ -56,6 +47,14 @@ public class DistrictFilesCsvImportService {
             int invalidLines
     ) {}
 
+    /**
+     * CSV simples 2 colunas:
+     * districtNamePt ; fileUrl
+     * ou
+     * districtNamePt , fileUrl
+     *
+     * Aqui o "texto rico" não costuma existir, mas usamos commons-csv para suportar quotes.
+     */
     @Transactional
     public ImportResult importFromCsv() {
         log.info("[DistrictFilesCsvImport] A carregar CSV de '{}'", csvPath);
@@ -71,46 +70,52 @@ public class DistrictFilesCsvImportService {
         int missingDistricts = 0;
         int invalidLines = 0;
 
-        // guarda as alterações por distrito e faz saveAll no fim
         Map<Long, District> dirty = new LinkedHashMap<>();
 
-        try (BufferedReader br = new BufferedReader(
-                new InputStreamReader(res.getInputStream(), StandardCharsets.UTF_8)
-        )) {
-            String line;
+        char delimiter = detectDelimiter(res);
+
+        CSVFormat format = CSVFormat.DEFAULT.builder()
+                .setDelimiter(delimiter)
+                .setQuote('"')
+                .setTrim(true)
+                .setIgnoreEmptyLines(true)
+                .setCommentMarker('#')
+                .build();
+
+        try (Reader reader = new InputStreamReader(res.getInputStream(), StandardCharsets.UTF_8);
+             CSVParser parser = new CSVParser(reader, format)) {
+
             boolean maybeHeader = true;
 
-            while ((line = br.readLine()) != null) {
-                line = line.trim();
+            for (CSVRecord r : parser) {
+                if (r.size() == 0) continue;
 
-                if (line.isEmpty() || line.startsWith("#")) continue;
+                String dName = safeGet(r, 0);
+                String fileUrl = safeGet(r, 1);
 
-                // detetar header na primeira linha "real"
+                if (isBlank(dName) && isBlank(fileUrl)) continue;
+
                 if (maybeHeader) {
                     maybeHeader = false;
-                    String l = line.toLowerCase(Locale.ROOT);
+                    String l = (dName + " " + fileUrl).toLowerCase(Locale.ROOT);
                     if (l.contains("district") || l.contains("name") || l.contains("ficheiro") || l.contains("file")) {
-                        // header detectado -> skip
-                        continue;
+                        continue; // header
                     }
                 }
 
                 totalLines++;
 
-                ParsedLine parsed = parseLine(line);
-                if (parsed == null) {
+                if (isBlank(dName) || isBlank(fileUrl)) {
                     invalidLines++;
-                    log.debug("[DistrictFilesCsvImport] Linha inválida: '{}'", line);
                     continue;
                 }
 
-                String districtNamePt = parsed.districtNamePt();
-                String fileUrl = parsed.fileUrl();
+                dName = dName.trim();
+                fileUrl = stripQuotes(fileUrl);
 
-                Optional<District> opt = districtRepository.findByNamePtIgnoreCase(districtNamePt);
+                Optional<District> opt = districtRepository.findByNamePtIgnoreCase(dName);
                 if (opt.isEmpty()) {
                     missingDistricts++;
-                    log.debug("[DistrictFilesCsvImport] Distrito '{}' não encontrado (linha='{}')", districtNamePt, line);
                     continue;
                 }
 
@@ -123,8 +128,9 @@ public class DistrictFilesCsvImportService {
                     dirty.put(d.getId(), d);
                 }
             }
-        } catch (IOException e) {
-            throw new IllegalStateException("[DistrictFilesCsvImport] Erro a ler CSV", e);
+
+        } catch (Exception e) {
+            throw new IllegalStateException("[DistrictFilesCsvImport] Erro a ler/importar CSV", e);
         }
 
         if (!dirty.isEmpty()) {
@@ -137,43 +143,38 @@ public class DistrictFilesCsvImportService {
         return new ImportResult(totalLines, dirty.size(), attachedFiles, missingDistricts, invalidLines);
     }
 
-    private record ParsedLine(String districtNamePt, String fileUrl) {}
+    // -------- helpers --------
 
-    /**
-     * Aceita:
-     *  - "Aveiro;https://..." ou "Aveiro,https://..."
-     *  - tolera espaços
-     *  - tolera colunas extra (divide em 2)
-     */
-    private ParsedLine parseLine(String line) {
-        // split por ; ou , mas só nas 2 primeiras colunas
-        String[] parts = line.split("[;,]", 2);
-        if (parts.length < 2) return null;
-
-        String district = parts[0].trim();
-        String file = parts[1].trim();
-
-        if (district.isEmpty() || file.isEmpty()) return null;
-
-        // normalização mínima
-        district = normalizeDistrictName(district);
-        file = normalizeFileUrl(file);
-
-        if (district.isEmpty() || file.isEmpty()) return null;
-
-        return new ParsedLine(district, file);
+    private static String safeGet(CSVRecord r, int idx) {
+        if (idx >= r.size()) return "";
+        String v = r.get(idx);
+        return v == null ? "" : v.trim();
     }
 
-    private String normalizeDistrictName(String s) {
-        return s.trim();
+    private static boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
     }
 
-    private String normalizeFileUrl(String s) {
-        // remove aspas simples/duplas de CSVs manhosos
-        String out = s.trim();
+    private static String stripQuotes(String s) {
+        String out = s == null ? "" : s.trim();
         if ((out.startsWith("\"") && out.endsWith("\"")) || (out.startsWith("'") && out.endsWith("'"))) {
             out = out.substring(1, out.length() - 1).trim();
         }
         return out;
+    }
+
+    private static char detectDelimiter(Resource res) {
+        try (BufferedReader br = new BufferedReader(new InputStreamReader(res.getInputStream(), StandardCharsets.UTF_8))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                line = line.trim();
+                if (line.isEmpty() || line.startsWith("#")) continue;
+
+                long semi = line.chars().filter(ch -> ch == ';').count();
+                long comma = line.chars().filter(ch -> ch == ',').count();
+                return semi > comma ? ';' : ',';
+            }
+        } catch (Exception ignored) {}
+        return ';';
     }
 }
