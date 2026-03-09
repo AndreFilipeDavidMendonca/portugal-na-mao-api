@@ -1,4 +1,3 @@
-// src/main/java/pt/dot/application/service/PoiService.java
 package pt.dot.application.service;
 
 import org.springframework.stereotype.Service;
@@ -11,7 +10,6 @@ import pt.dot.application.db.entity.Poi;
 import pt.dot.application.db.entity.PoiImage;
 import pt.dot.application.db.entity.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
-import pt.dot.application.db.repo.PoiImageRepository;
 import pt.dot.application.db.repo.PoiRepository;
 import pt.dot.application.security.SecurityUtil;
 
@@ -20,38 +18,40 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
-import static org.springframework.http.HttpStatus.*;
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
+import static org.springframework.http.HttpStatus.FORBIDDEN;
+import static org.springframework.http.HttpStatus.NOT_FOUND;
+import static org.springframework.http.HttpStatus.UNAUTHORIZED;
 
 @Service
 @Transactional
 public class PoiService {
 
+    private static final String SOURCE_BUSINESS = "business";
+    private static final int MAX_IMAGES = 5;
+
     private final PoiRepository poiRepository;
     private final AppUserRepository userRepository;
-    private final PoiImageRepository poiImageRepository;
+    private final WikimediaMediaService wikimediaMediaService;
 
-    public PoiService(PoiRepository poiRepository, AppUserRepository userRepository, PoiImageRepository poiImageRepository) {
+    public PoiService(
+            PoiRepository poiRepository,
+            AppUserRepository userRepository,
+            WikimediaMediaService wikimediaMediaService
+    ) {
         this.poiRepository = poiRepository;
         this.userRepository = userRepository;
-        this.poiImageRepository = poiImageRepository;
+        this.wikimediaMediaService = wikimediaMediaService;
     }
-
-    /* ============================
-       READ
-    ============================ */
 
     @Transactional(readOnly = true)
     public List<PoiDto> findAll() {
-        // leve (sem galeria). Para não dar N+1, não tocamos nas imagens aqui.
         return poiRepository.findAll().stream().map(this::toDtoList).toList();
     }
 
     @Transactional(readOnly = true)
     public Optional<PoiDto> findById(Long id) {
         if (id == null) return Optional.empty();
-
-        // ⚠️ se não usares join fetch no repo, isto ainda funciona porque estamos dentro de @Transactional(readOnly=true)
-        // mas pode fazer lazy-load ao aceder às imagens.
         return poiRepository.findById(id).map(this::toDtoDetail);
     }
 
@@ -68,10 +68,6 @@ public class PoiService {
         return poiRepository.findByOwner_Id(me.getId()).stream().map(this::toDtoList).toList();
     }
 
-    /* ============================
-       CREATE (comercial)
-    ============================ */
-
     public Long createBusinessPoi(CreatePoiRequestDto req) {
         AppUser me = requireBusinessOrAdmin();
         if (req == null) throw new ResponseStatusException(BAD_REQUEST, "Body em falta");
@@ -87,20 +83,20 @@ public class PoiService {
 
         List<String> imagesB64 = normalizeImages(req.getImages());
 
-        // fallback: se vier image mas images vazio
         String primary = safeNull(req.getImage());
-        if (imagesB64.isEmpty() && primary != null) imagesB64 = List.of(primary);
+        if (imagesB64.isEmpty() && primary != null) {
+            imagesB64 = List.of(primary);
+        }
 
         Poi p = new Poi();
         p.setOwner(me);
-        p.setSource("business");
+        p.setSource(SOURCE_BUSINESS);
         p.setName(name);
         p.setCategory(category);
         p.setDescription(safeNull(req.getDescription()));
         p.setLat(req.getLat());
         p.setLon(req.getLon());
 
-        // cria relação (cascade)
         int pos = 0;
         for (String b64 : imagesB64) {
             PoiImage img = new PoiImage();
@@ -109,14 +105,9 @@ public class PoiService {
             p.addImage(img);
         }
 
-        // ✅ IMPORTANTÍSSIMO: flush para não haver "201 fantasma"
         Poi saved = poiRepository.saveAndFlush(p);
         return saved.getId();
     }
-
-    /* ============================
-       UPDATE
-    ============================ */
 
     public Optional<PoiDto> updatePoi(Long id, PoiDto dto) {
         if (id == null) return Optional.empty();
@@ -125,17 +116,13 @@ public class PoiService {
             if (poi.getOwner() != null) {
                 requireOwnerOrAdmin(poi);
             }
+
             applyPatch(poi, dto);
 
-            // flush para validações/DB na hora
             Poi saved = poiRepository.saveAndFlush(poi);
             return toDtoDetail(saved);
         });
     }
-
-    /* ============================
-       DELETE (comercial)
-    ============================ */
 
     public void deleteBusinessPoi(Long id) {
         if (id == null) throw new ResponseStatusException(BAD_REQUEST, "ID em falta");
@@ -148,14 +135,8 @@ public class PoiService {
         }
 
         requireOwnerOrAdmin(poi);
-
-        // orphanRemoval + cascade apaga as imagens
         poiRepository.delete(poi);
     }
-
-    /* ============================
-       PATCH
-    ============================ */
 
     private void applyPatch(Poi poi, PoiDto dto) {
         if (dto == null) return;
@@ -170,10 +151,10 @@ public class PoiService {
             if (dto.getLon() != null) poi.setLon(dto.getLon());
         }
 
-        // Caso 1: veio lista completa -> substitui tudo
         if (dto.getImages() != null) {
             List<String> images = normalizeImages(dto.getImages());
             poi.clearImages();
+
             int pos = 0;
             for (String b64 : images) {
                 PoiImage img = new PoiImage();
@@ -184,7 +165,6 @@ public class PoiService {
             return;
         }
 
-        // Caso 2: veio só image -> substituir a primeira (ou criar)
         if (dto.getImage() != null) {
             String img0 = safeNull(dto.getImage());
             if (img0 == null) return;
@@ -197,20 +177,14 @@ public class PoiService {
                 return;
             }
 
-            // mantém a galeria e só troca a 0
             PoiImage first = poi.getImages().get(0);
             first.setData(img0);
         }
     }
 
-    /* ============================
-       DTO MAPPERS
-    ============================ */
-
     private PoiDto toDtoList(Poi p) {
         IdPair ids = idsOf(p);
 
-        // LEVE: não traz galeria. (se quiseres thumbnail, dá para fazer endpoint dedicado depois)
         return new PoiDto(
                 p.getId(),
                 ids.districtId(),
@@ -226,18 +200,33 @@ public class PoiService {
                 p.getSipaId(),
                 p.getExternalOsmId(),
                 p.getSource(),
-                null,  // image (primary) omitido para não N+1
-                null   // images omitido
+                null,
+                null
         );
     }
 
     private PoiDto toDtoDetail(Poi p) {
         IdPair ids = idsOf(p);
 
-        List<String> gallery = (p.getImages() == null ? List.<String>of() :
-                p.getImages().stream().map(PoiImage::getData).toList());
+        List<String> storedGallery = (p.getImages() == null
+                ? List.of()
+                : p.getImages().stream()
+                .map(PoiImage::getData)
+                .filter(v -> v != null && !v.isBlank())
+                .distinct()
+                .limit(MAX_IMAGES)
+                .toList());
 
-        String primary = gallery.isEmpty() ? null : gallery.get(0);
+        List<String> finalGallery = shouldEnrichWithCommons(p)
+                ? wikimediaMediaService.getPoiMedia5(
+                p.getNamePt(),
+                p.getName(),
+                p.getSource(),
+                storedGallery
+        )
+                : storedGallery;
+
+        String primary = finalGallery.isEmpty() ? null : finalGallery.get(0);
 
         return new PoiDto(
                 p.getId(),
@@ -255,8 +244,14 @@ public class PoiService {
                 p.getExternalOsmId(),
                 p.getSource(),
                 primary,
-                gallery
+                finalGallery
         );
+    }
+
+    private boolean shouldEnrichWithCommons(Poi p) {
+        if (p == null) return false;
+        if (p.getOwner() != null) return false;
+        return !SOURCE_BUSINESS.equalsIgnoreCase(safe(p.getSource()));
     }
 
     private record IdPair(Long districtId, UUID ownerId) {}
@@ -266,10 +261,6 @@ public class PoiService {
         UUID ownerId = (p.getOwner() != null ? p.getOwner().getId() : null);
         return new IdPair(districtId, ownerId);
     }
-
-    /* ============================
-       AUTH HELPERS (JWT)
-    ============================ */
 
     private AppUser requireMe() {
         UUID userId = SecurityUtil.getUserIdOrNull();
@@ -299,10 +290,6 @@ public class PoiService {
         }
     }
 
-    /* ============================
-       UTIL
-    ============================ */
-
     private static String safe(String s) {
         return s == null ? "" : s.trim();
     }
@@ -320,6 +307,7 @@ public class PoiService {
             String v = safeNull(it);
             if (v == null) continue;
             if (!out.contains(v)) out.add(v);
+            if (out.size() >= MAX_IMAGES) break;
         }
         return out;
     }

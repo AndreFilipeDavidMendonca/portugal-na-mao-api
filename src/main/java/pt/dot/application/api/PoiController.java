@@ -1,7 +1,5 @@
-// src/main/java/pt/dot/application/api/PoiController.java
 package pt.dot.application.api;
 
-import jakarta.servlet.http.HttpSession;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import pt.dot.application.api.dto.CreatePoiRequestDto;
@@ -14,7 +12,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/pois")
-
 public class PoiController {
 
     private final PoiService poiService;
@@ -35,7 +32,7 @@ public class PoiController {
         return poiService.findMine();
     }
 
-    /** Detalhe por SIPA (inclui galeria) */
+    /** Detalhe por SIPA (inclui galeria/enrichment se aplicável) */
     @GetMapping("/by-sipa/{sipaId}")
     public ResponseEntity<PoiDto> getBySipaId(@PathVariable String sipaId) {
         return poiService.findBySipaId(sipaId)
@@ -43,7 +40,7 @@ public class PoiController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Detalhe por ID (inclui galeria) */
+    /** Detalhe por ID (inclui galeria/enrichment se aplicável) */
     @GetMapping("/{id}")
     public ResponseEntity<PoiDto> getById(@PathVariable Long id) {
         return poiService.findById(id)
@@ -74,6 +71,6 @@ public class PoiController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         poiService.deleteBusinessPoi(id);
-        return ResponseEntity.noContent().build(); // ✅ 204
+        return ResponseEntity.noContent().build();
     }
 }

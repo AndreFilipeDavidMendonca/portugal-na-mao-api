@@ -9,6 +9,7 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/PoiController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/SearchController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/AuthResponseDto.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CommonsMediaDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CreatePoiCommentRequest.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CreatePoiRequestDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/CurrentUserDto.java
@@ -50,6 +51,7 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesBootstrap.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictFilesCsvImportService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictPoiQueryService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictsBootstrap.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/DistrictsCsvImportService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/FavoriteService.java
@@ -58,5 +60,9 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiCsvSyncService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/PoiService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/SearchService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/WikimediaCommonsClient.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/WikimediaMediaCache.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/WikimediaMediaService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/sipa/PoiCsvSyncRunner.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/util/PasswordHashUtil.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/util/TextNorm.java

@@ -1,7 +1,7 @@
-// src/main/java/pt/dot/application/api/dto/PoiDto.java
 package pt.dot.application.api.dto;
 
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
@@ -9,12 +9,11 @@ import java.util.UUID;
 
 @Setter
 @Getter
+@NoArgsConstructor
 public class PoiDto {
 
     private Long id;
     private Long districtId;
-
-    // ✅ novo
     private UUID ownerId;
 
     private String name;
@@ -68,5 +67,4 @@ public class PoiDto {
         this.image = image;
         this.images = images;
     }
-
 }

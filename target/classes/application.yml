@@ -1,12 +1,11 @@
 server:
   port: ${PORT:8085}
 
-  # importante em plataformas tipo Vercel (proxy à frente)
+  # importante em plataformas com proxy à frente
   forward-headers-strategy: framework
 
   tomcat:
     max-swallow-size: 20MB
-
 
   servlet:
     session:
@@ -16,6 +15,7 @@ server:
     enabled: true
     min-response-size: 1024
     mime-types: application/json,text/plain,text/html,text/xml,text/css,application/javascript
+
 
 spring:
   application:
@@ -30,21 +30,29 @@ spring:
       max-request-size: 20MB
 
   datasource:
-    # em produção no Vercel vais pôr estes env vars
+    driver-class-name: org.postgresql.Driver
+    # Local por default (dev)
     url: ${JDBC_DATABASE_URL:jdbc:postgresql://localhost:5432/pt_dot}
     username: ${JDBC_DATABASE_USERNAME:ptdot_user}
     password: ${JDBC_DATABASE_PASSWORD:ptdot_pass}
-    driver-class-name: org.postgresql.Driver
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:8}
+      minimum-idle: ${DB_POOL_MIN_IDLE:1}
+      connection-timeout: ${DB_CONN_TIMEOUT_MS:30000}
+      validation-timeout: ${DB_VALIDATION_TIMEOUT_MS:5000}
+      idle-timeout: ${DB_IDLE_TIMEOUT_MS:600000}
+      max-lifetime: ${DB_MAX_LIFETIME_MS:1800000}
 
   jpa:
-    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    open-in-view: false
+    show-sql: ${SHOW_SQL:false}
     hibernate:
-      ddl-auto: ${HIBERNATE_DDL_AUTO:update}
+      # Em dev podes usar validate/none. Evita update em prod.
+      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
         format_sql: true
-    show-sql: ${SHOW_SQL:false}
 
   sql:
     init:
@@ -52,6 +60,19 @@ spring:
 
   cache:
     type: caffeine
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    # útil quando já existe schema criado previamente
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+    # opcional: se queres controlar a baseline version/description
+    baseline-version: ${FLYWAY_BASELINE_VERSION:1}
+    baseline-description: ${FLYWAY_BASELINE_DESCRIPTION:baseline}
+    validate-on-migrate: true
+    # se tiveres migrations fora de ordem durante iteração
+    out-of-order: ${FLYWAY_OUT_OF_ORDER:false}
+
 
 app:
   geocoding:
@@ -61,19 +82,16 @@ app:
     cache:
       ttl-seconds: 604800
 
-logging:
-  level:
-    pt.dot.application.service: ${LOG_LEVEL_SERVICE:INFO}
-    pt.dot.application.monumentos: ${LOG_LEVEL_MONUMENTOS:INFO}
 
 ptdot:
   jwt:
     secret: ${PTDOT_JWT_SECRET:CHANGE_ME_TO_A_LONG_RANDOM_SECRET_32+_CHARS}
     issuer: ${PTDOT_JWT_ISSUER:ptdot}
     accessTokenMinutes: ${PTDOT_JWT_ACCESS_MINUTES:60}
+
   bootstrap:
     reset-pois: ${PTDOT_RESET_POIS:false}
-    import-districts: ${PTDOT_IMPORT_DISTRICTS:true}
+    import-districts: ${PTDOT_IMPORT_DISTRICTS:false}
     import-district-files: ${PTDOT_IMPORT_DISTRICT_FILES:false}
     sync-pois-from-csv: ${PTDOT_SYNC_POIS_FROM_CSV:false}
 
@@ -82,3 +100,55 @@ ptdot:
     poi-images-csv-path: ${PTDOT_SIPA_POI_IMAGES_CSV_PATH:classpath:/sipa/poi_images.csv}
     districts-csv-path: ${PTDOT_SIPA_DISTRICTS_CSV_PATH:classpath:/sipa/districts.csv}
     district-files-csv-path: ${PTDOT_SIPA_DISTRICT_FILES_CSV_PATH:classpath:/sipa/district_files.csv}
+
+
+logging:
+  level:
+    pt.dot.application.service: ${LOG_LEVEL_SERVICE:INFO}
+    pt.dot.application.monumentos: ${LOG_LEVEL_MONUMENTOS:INFO}
+
+
+# ==========================
+# PERFIS
+# ==========================
+
+---
+spring:
+  config:
+    activate:
+      on-profile: dev
+
+  jpa:
+    show-sql: ${SHOW_SQL:true}
+    hibernate:
+      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
+
+  flyway:
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
+
+
+---
+spring:
+  config:
+    activate:
+      on-profile: prod
+
+  datasource:
+    # Em Render normalmente vais setar estes env vars
+    # Nota: se o teu provider exigir SSL, usa ?sslmode=require no JDBC_DATABASE_URL
+    url: ${JDBC_DATABASE_URL}
+    username: ${JDBC_DATABASE_USERNAME}
+    password: ${JDBC_DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: ${DB_POOL_MAX:10}
+
+  jpa:
+    show-sql: ${SHOW_SQL:false}
+    hibernate:
+      # Produção: nunca "update"
+      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
+
+  flyway:
+    enabled: true
+    # Em prod pode manter baseline-on-migrate true se a BD já tem schema
+    baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}

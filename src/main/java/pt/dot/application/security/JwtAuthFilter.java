@@ -1,4 +1,3 @@
-
 package pt.dot.application.security;
 
 import jakarta.servlet.FilterChain;
@@ -30,27 +29,41 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     }
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain chain
+    ) throws ServletException, IOException {
 
         final String header = request.getHeader(HttpHeaders.AUTHORIZATION);
 
-        if (header != null && header.startsWith("Bearer ")) {
-            String token = header.substring(7).trim();
+        if (header == null || !header.startsWith("Bearer ")) {
+            response.setHeader("X-Debug-JWT", "missing");
+            chain.doFilter(request, response);
+            return;
+        }
+
+        String token = header.substring(7).trim();
+
+        if (token.isBlank()) {
+            response.setHeader("X-Debug-JWT", "blank");
+            SecurityContextHolder.clearContext();
+            chain.doFilter(request, response);
+            return;
+        }
+
+        try {
             var principal = jwtService.tryParse(token);
 
             if (principal != null) {
-                // Preparamos as autoridades
                 var authorities = List.of(new SimpleGrantedAuthority(asRole(principal.role())));
 
-                // Criamos o token de autenticação (o principal será o UUID do utilizador)
                 var auth = new UsernamePasswordAuthenticationToken(
                         principal.userId(),
                         null,
                         authorities
                 );
 
-                // ✅ Definimos o contexto explicitamente
                 SecurityContext context = SecurityContextHolder.createEmptyContext();
                 context.setAuthentication(auth);
                 SecurityContextHolder.setContext(context);
@@ -60,8 +73,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 response.setHeader("X-Debug-JWT", "invalid");
                 SecurityContextHolder.clearContext();
             }
-        } else {
-            response.setHeader("X-Debug-JWT", "missing");
+        } catch (Exception e) {
+            response.setHeader("X-Debug-JWT", "error");
+            SecurityContextHolder.clearContext();
         }
 
         chain.doFilter(request, response);

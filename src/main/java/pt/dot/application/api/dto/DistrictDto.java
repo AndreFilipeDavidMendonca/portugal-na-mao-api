@@ -1,4 +1,3 @@
-// src/main/java/pt/dot/application/api/dto/DistrictDto.java
 package pt.dot.application.api.dto;
 
 import lombok.AllArgsConstructor;
@@ -26,7 +25,6 @@ public class DistrictDto {
     private Integer municipalitiesCount;
     private Integer parishesCount;
 
-    // URLs / strings dos ficheiros
     private List<String> files;
     private List<String> sources;
 }
