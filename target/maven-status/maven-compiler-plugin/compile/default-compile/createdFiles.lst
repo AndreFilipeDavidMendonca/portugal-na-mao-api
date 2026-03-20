@@ -46,6 +46,7 @@ pt/dot/application/config/GeocodingConfig.class
 pt/dot/application/api/dto/FavoriteStatusDto.class
 pt/dot/application/api/dto/AuthResponseDto.class
 pt/dot/application/db/entity/UserRole.class
+pt/dot/application/api/dto/UpdateCurrentUserRequestDto.class
 pt/dot/application/service/SearchService.class
 pt/dot/application/db/entity/Favorite.class
 pt/dot/application/ApplicationJava.class

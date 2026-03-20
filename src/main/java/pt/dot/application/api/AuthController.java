@@ -1,19 +1,22 @@
-
 package pt.dot.application.api;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 import pt.dot.application.api.dto.CurrentUserDto;
 import pt.dot.application.api.dto.LoginRequestDto;
 import pt.dot.application.api.dto.RegisterRequestDto;
+import pt.dot.application.api.dto.UpdateCurrentUserRequestDto;
 import pt.dot.application.db.entity.AppUser;
 import pt.dot.application.db.entity.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
 import pt.dot.application.security.JwtService;
 
-import java.util.*;
+import java.util.UUID;
+
+import static org.springframework.http.HttpStatus.BAD_REQUEST;
 
 @RestController
 @RequestMapping("/api")
@@ -30,10 +33,6 @@ public class AuthController {
         this.jwtService = jwtService;
     }
 
-    /**
-     * ✅ NOVO: Endpoint para obter dados do utilizador logado.
-     * Invocado pelo frontend no fetchCurrentUser().
-     */
     @GetMapping("/me")
     public ResponseEntity<CurrentUserDto> getCurrentUser() {
         var auth = SecurityContextHolder.getContext().getAuthentication();
@@ -44,6 +43,23 @@ public class AuthController {
 
         return userRepository.findById(userId)
                 .map(u -> ResponseEntity.ok(toDto(u)))
+                .orElse(ResponseEntity.status(401).build());
+    }
+
+    @PatchMapping("/me")
+    public ResponseEntity<CurrentUserDto> updateCurrentUser(@RequestBody UpdateCurrentUserRequestDto body) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+
+        if (auth == null || !auth.isAuthenticated() || !(auth.getPrincipal() instanceof UUID userId)) {
+            return ResponseEntity.status(401).build();
+        }
+
+        return userRepository.findById(userId)
+                .map(user -> {
+                    applyUserPatch(user, body);
+                    AppUser saved = userRepository.save(user);
+                    return ResponseEntity.ok(toDto(saved));
+                })
                 .orElse(ResponseEntity.status(401).build());
     }
 
@@ -90,10 +106,70 @@ public class AuthController {
                 .orElse(ResponseEntity.status(401).build());
     }
 
+    private void applyUserPatch(AppUser user, UpdateCurrentUserRequestDto body) {
+        if (body == null) return;
+
+        if (body.getDisplayName() != null) {
+            String displayName = trimOrNull(body.getDisplayName());
+            user.setDisplayName(displayName != null ? displayName : buildDisplayName(
+                    user.getFirstName(),
+                    user.getLastName(),
+                    user.getEmail()
+            ));
+        }
+
+        if (body.getAvatarUrl() != null) {
+            user.setAvatarUrl(trimOrNull(body.getAvatarUrl()));
+        }
+
+        if (body.getFirstName() != null) {
+            user.setFirstName(trimOrNull(body.getFirstName()));
+        }
+
+        if (body.getLastName() != null) {
+            user.setLastName(trimOrNull(body.getLastName()));
+        }
+
+        if (body.getAge() != null) {
+            Integer age = body.getAge();
+            if (age < 0 || age > 130) {
+                throw new ResponseStatusException(BAD_REQUEST, "Idade inválida");
+            }
+            user.setAge(age);
+        }
+
+        if (body.getNationality() != null) {
+            user.setNationality(trimOrNull(body.getNationality()));
+        }
+
+        if (body.getPhone() != null) {
+            user.setPhone(trimOrNull(body.getPhone()));
+        }
+
+        if (body.getDisplayName() == null) {
+            String currentDisplayName = trimOrNull(user.getDisplayName());
+            if (currentDisplayName == null) {
+                user.setDisplayName(buildDisplayName(
+                        user.getFirstName(),
+                        user.getLastName(),
+                        user.getEmail()
+                ));
+            }
+        }
+    }
+
     private CurrentUserDto toDto(AppUser u) {
         return new CurrentUserDto(
-                u.getId(), u.getEmail(), u.getDisplayName(), u.getAvatarUrl(), u.getRole().name(),
-                u.getFirstName(), u.getLastName(), u.getAge(), u.getNationality(), u.getPhone()
+                u.getId(),
+                u.getEmail(),
+                u.getDisplayName(),
+                u.getAvatarUrl(),
+                u.getRole().name(),
+                u.getFirstName(),
+                u.getLastName(),
+                u.getAge(),
+                u.getNationality(),
+                u.getPhone()
         );
     }
 

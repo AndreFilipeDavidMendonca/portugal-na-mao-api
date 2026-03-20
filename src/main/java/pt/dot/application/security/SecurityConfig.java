@@ -7,7 +7,9 @@ import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.*;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.List;
 
@@ -32,6 +34,7 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
                         .requestMatchers(HttpMethod.POST, "/api/login", "/api/register").permitAll()
+
                         .requestMatchers(HttpMethod.GET, "/api/pois/**", "/api/districts/**").permitAll()
 
                         .requestMatchers(HttpMethod.GET, "/api/pois/*/comments").permitAll()
@@ -39,6 +42,8 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
 
                         .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
+                        .requestMatchers(HttpMethod.PATCH, "/api/me").authenticated()
+
                         .requestMatchers("/api/favorites/**").authenticated()
 
                         .anyRequest().authenticated()
@@ -57,9 +62,27 @@ public class SecurityConfig {
                 "https://portugal-na-mao.vercel.app",
                 "https://*.vercel.app"
         ));
-        cfg.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
-        cfg.setAllowedHeaders(List.of("Authorization", "authorization", "Content-Type"));
-        cfg.setExposedHeaders(List.of("Authorization", "X-Debug-JWT"));
+
+        cfg.setAllowedMethods(List.of(
+                "GET",
+                "POST",
+                "PUT",
+                "PATCH",
+                "DELETE",
+                "OPTIONS"
+        ));
+
+        cfg.setAllowedHeaders(List.of(
+                "Authorization",
+                "authorization",
+                "Content-Type"
+        ));
+
+        cfg.setExposedHeaders(List.of(
+                "Authorization",
+                "X-Debug-JWT"
+        ));
+
         cfg.setAllowCredentials(false);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

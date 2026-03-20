@@ -26,6 +26,7 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/PoiLiteResponseDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/RegisterRequestDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/SearchItemDto.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/dto/UpdateCurrentUserRequestDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/config/GeocodingConfig.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/converter/StringListConverter.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/AppUser.java
