@@ -3,6 +3,7 @@ package pt.dot.application.db.entity;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
+import pt.dot.application.db.enums.UserRole;
 
 import java.time.Instant;
 import java.util.Objects;

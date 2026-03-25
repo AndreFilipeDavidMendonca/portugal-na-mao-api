@@ -1,0 +1,30 @@
+package pt.dot.application.api.dto.district;
+
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
+import java.util.List;
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+public class DistrictDto {
+
+    private Long id;
+    private String code;
+    private String name;
+    private String namePt;
+    private Integer population;
+    private Integer foundedYear;
+    private Double lat;
+    private Double lon;
+    private String description;
+    private String inhabitedSince;
+    private String history;
+    private Integer municipalitiesCount;
+    private Integer parishesCount;
+
+    private List<String> files;
+    private List<String> sources;
+}

@@ -8,7 +8,7 @@ import org.springframework.boot.CommandLineRunner;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Component;
-import pt.dot.application.service.PoiCsvSyncService;
+import pt.dot.application.service.poi.PoiCsvSyncService;
 
 @Component
 public class PoiCsvSyncRunner implements CommandLineRunner {

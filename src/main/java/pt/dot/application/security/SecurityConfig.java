@@ -3,6 +3,7 @@ package pt.dot.application.security;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
@@ -24,28 +25,46 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain filterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
-                .cors(cors -> {})
+                .cors(Customizer.withDefaults())
                 .csrf(csrf -> csrf.disable())
                 .sessionManagement(sm -> sm.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .formLogin(fl -> fl.disable())
                 .httpBasic(hb -> hb.disable())
                 .exceptionHandling(eh -> eh.authenticationEntryPoint((req, res, ex) -> res.sendError(401)))
                 .authorizeHttpRequests(auth -> auth
+                        // preflight
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
 
+                        // auth pública
                         .requestMatchers(HttpMethod.POST, "/api/login", "/api/register").permitAll()
 
-                        .requestMatchers(HttpMethod.GET, "/api/pois/**", "/api/districts/**").permitAll()
-
+                        // públicos reais
+                        .requestMatchers(HttpMethod.GET, "/api/districts", "/api/districts/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pois").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pois/lite").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/pois/*").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/search").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/pois/*/comments").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/pois/*/comments").authenticated()
-                        .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
 
+                        // autenticados
                         .requestMatchers(HttpMethod.GET, "/api/me").authenticated()
                         .requestMatchers(HttpMethod.PATCH, "/api/me").authenticated()
 
-                        .requestMatchers("/api/favorites/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/pois").authenticated()
+                        .requestMatchers(HttpMethod.PUT, "/api/pois/*").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/pois/*").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/pois/mine").authenticated()
 
+                        .requestMatchers(HttpMethod.POST, "/api/pois/*/comments").authenticated()
+                        .requestMatchers(HttpMethod.DELETE, "/api/comments/*").authenticated()
+
+                        .requestMatchers("/api/favorites/**").authenticated()
+                        .requestMatchers("/api/friendships/**").authenticated()
+
+                        // geocode, se quiseres só users autenticados
+                        .requestMatchers("/api/geocode").authenticated()
+
+                        .requestMatchers("/api/chat/**").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
