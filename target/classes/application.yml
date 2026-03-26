@@ -79,16 +79,19 @@ ptdot:
     accessTokenMinutes: ${PTDOT_JWT_ACCESS_MINUTES:60}
 
   bootstrap:
+    reconcile-schema: ${PTDOT_RECONCILE_SCHEMA:false}
+    schema-script-path: ${PTDOT_SCHEMA_SCRIPT_PATH:classpath:/db/bootstrap/schema_pt_dot.sql}
+    populate: ${PTDOT_POPULATE:false}
+    populate-script-path: ${PTDOT_POPULATE_SCRIPT_PATH:classpath:/db/bootstrap/populate_pt_dot.sql}
+    populate-if-empty: ${PTDOT_POPULATE_IF_EMPTY:true}
+    populate-districts: ${PTDOT_POPULATE_DISTRICTS:true}
+    populate-district-files: ${PTDOT_POPULATE_DISTRICT_FILES:true}
+    populate-pois: ${PTDOT_POPULATE_POIS:true}
+
     reset-pois: ${PTDOT_RESET_POIS:false}
     import-districts: ${PTDOT_IMPORT_DISTRICTS:false}
     import-district-files: ${PTDOT_IMPORT_DISTRICT_FILES:false}
     sync-pois-from-csv: ${PTDOT_SYNC_POIS_FROM_CSV:false}
-
-  sipa:
-    pois-csv-path: ${PTDOT_SIPA_POIS_CSV_PATH:classpath:/sipa/pois.csv}
-    poi-images-csv-path: ${PTDOT_SIPA_POI_IMAGES_CSV_PATH:classpath:/sipa/poi_images.csv}
-    districts-csv-path: ${PTDOT_SIPA_DISTRICTS_CSV_PATH:classpath:/sipa/districts.csv}
-    district-files-csv-path: ${PTDOT_SIPA_DISTRICT_FILES_CSV_PATH:classpath:/sipa/district_files.csv}
 
 logging:
   level:

@@ -56,6 +56,8 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/poi/PoiCommentController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/poi/PoiController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/search/SearchController.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/bootstrap/BootstrapPopulateRunner.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/config/BootstrapFlywayConfig.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/config/GeocodingConfig.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/converter/StringListConverter.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/AppUser.java

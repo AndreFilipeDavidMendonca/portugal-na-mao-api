@@ -80,6 +80,7 @@ pt/dot/application/db/repo/PoiLiteView.class
 pt/dot/application/service/district/DistrictFilesBootstrap.class
 pt/dot/application/service/geocoding/GeocodingService.class
 pt/dot/application/security/SecurityUtil.class
+pt/dot/application/bootstrap/BootstrapPopulateRunner.class
 pt/dot/application/api/dto/district/DistrictDto.class
 pt/dot/application/service/poi/PoiService$IdPair.class
 pt/dot/application/service/wikimedia/WikimediaMediaService.class
@@ -104,6 +105,7 @@ pt/dot/application/db/entity/Favorite.class
 pt/dot/application/api/dto/favorite/FavoriteStatusDto.class
 pt/dot/application/db/repo/PoiImageRepository.class
 pt/dot/application/api/dto/GeocodeResponseDto.class
+pt/dot/application/config/BootstrapFlywayConfig.class
 pt/dot/application/security/JwtAuthFilter.class
 pt/dot/application/service/district/DistrictPoiQueryService$Bbox.class
 pt/dot/application/exception/ApiException.class
