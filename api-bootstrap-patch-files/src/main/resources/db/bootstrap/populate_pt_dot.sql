@@ -1,7 +1,0 @@
--- Script opcional de população manual.
--- Ativa com PTDOT_POPULATE=true.
--- O runner só o executa quando o checksum deste ficheiro muda.
---
--- Exemplos:
--- INSERT INTO district(code, name, name_pt) VALUES ('LIS', 'Lisbon', 'Lisboa') ON CONFLICT DO NOTHING;
--- INSERT INTO app_user(email, password_hash, role) VALUES ('admin@pt-dot.local', 'CHANGE_ME', 'ADMIN') ON CONFLICT (email) DO NOTHING;

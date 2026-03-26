@@ -76,6 +76,7 @@ pt/dot/application/util/PasswordHashUtil.class
 pt/dot/application/db/entity/District.class
 pt/dot/application/api/dto/chat/StartChatResponseDto.class
 pt/dot/application/service/poi/PoiService.class
+pt/dot/application/exception/GlobalExceptionHandler$1.class
 pt/dot/application/db/repo/PoiLiteView.class
 pt/dot/application/service/district/DistrictFilesBootstrap.class
 pt/dot/application/service/geocoding/GeocodingService.class
