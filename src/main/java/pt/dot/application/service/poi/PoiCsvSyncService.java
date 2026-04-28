@@ -203,7 +203,7 @@ public class PoiCsvSyncService {
             for (Map.Entry<Long, LinkedHashSet<String>> entry : imagesByPoiId.entrySet()) {
                 Long poiId = entry.getKey();
 
-                List<String> existing = mediaItemService.getResolvedUrls(
+                List<String> existing = mediaItemService.getStorageKeys(
                         MediaItemService.ENTITY_POI,
                         poiId,
                         MediaItemService.MEDIA_IMAGE,
@@ -223,7 +223,7 @@ public class PoiCsvSyncService {
                         poiId,
                         MediaItemService.MEDIA_IMAGE,
                         finalImages,
-                        "csv-import"
+                        MediaItemService.PROVIDER_CSV
                 );
 
                 attached += entry.getValue().size();

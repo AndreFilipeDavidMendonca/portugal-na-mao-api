@@ -3,12 +3,14 @@ package pt.dot.application.service.media;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import pt.dot.application.exception.Errors;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
 import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.core.sync.RequestBody;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
+import software.amazon.awssdk.services.s3.model.S3Exception;
 
 import java.io.IOException;
 import java.net.URI;
@@ -19,8 +21,7 @@ import java.util.UUID;
 @Service
 public class R2MediaStorageService {
 
-    private static final long MAX_UPLOAD_BYTES = 100L * 1024L * 1024L;
-
+    private final long maxUploadBytes;
     private final boolean enabled;
     private final String bucket;
     private final String baseUrl;
@@ -33,11 +34,13 @@ public class R2MediaStorageService {
             @Value("${ptdot.media.r2.secret-access-key:}") String secretAccessKey,
             @Value("${ptdot.media.r2.bucket:}") String bucket,
             @Value("${ptdot.media.r2.region:auto}") String region,
-            @Value("${ptdot.media.base-url}") String baseUrl
+            @Value("${ptdot.media.base-url}") String baseUrl,
+            @Value("${ptdot.media.max-upload-bytes:104857600}") long maxUploadBytes
     ) {
         this.enabled = enabled;
         this.bucket = bucket;
         this.baseUrl = stripTrailingSlash(baseUrl);
+        this.maxUploadBytes = maxUploadBytes;
 
         if (enabled) {
             require(endpoint, "ptdot.media.r2.endpoint");
@@ -59,15 +62,15 @@ public class R2MediaStorageService {
 
     public UploadResult upload(MultipartFile file, String entityType, Long entityId, String mediaType) {
         if (!enabled) {
-            throw new IllegalStateException("R2 media upload is disabled");
+            throw Errors.conflict("R2_DISABLED", "Upload para R2 está desativado neste ambiente.");
         }
 
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("Ficheiro em falta");
+            throw Errors.badRequest("MEDIA_FILE_REQUIRED", "Ficheiro em falta.");
         }
 
-        if (file.getSize() > MAX_UPLOAD_BYTES) {
-            throw new IllegalArgumentException("Ficheiro demasiado grande");
+        if (file.getSize() > maxUploadBytes) {
+            throw Errors.badRequest("MEDIA_FILE_TOO_LARGE", "Ficheiro demasiado grande.");
         }
 
         String contentType = normalizeContentType(file.getContentType());
@@ -82,10 +85,42 @@ public class R2MediaStorageService {
 
             s3Client.putObject(request, RequestBody.fromInputStream(file.getInputStream(), file.getSize()));
         } catch (IOException ex) {
-            throw new IllegalStateException("Erro ao ler ficheiro para upload", ex);
+            throw Errors.badRequest("MEDIA_READ_FAILED", "Não foi possível ler o ficheiro enviado.");
+        } catch (S3Exception ex) {
+            throw mapS3Exception(ex);
         }
 
         return new UploadResult(key, baseUrl + "/" + key, contentType, file.getSize());
+    }
+
+    private static RuntimeException mapS3Exception(S3Exception ex) {
+        int status = ex.statusCode();
+
+        if (status == 403) {
+            return Errors.forbidden(
+                    "R2_ACCESS_DENIED",
+                    "Sem permissão para gravar no bucket R2. Confirma se a Access Key tem Object Read & Write."
+            );
+        }
+
+        if (status == 404) {
+            return Errors.notFound(
+                    "R2_BUCKET_NOT_FOUND",
+                    "Bucket R2 não encontrado. Confirma o nome do bucket e o endpoint configurado."
+            );
+        }
+
+        if (status >= 400 && status < 500) {
+            return Errors.badRequest(
+                    "R2_UPLOAD_REJECTED",
+                    "O R2 rejeitou o upload. Confirma bucket, endpoint e permissões."
+            );
+        }
+
+        return Errors.internalServerError(
+                "R2_UPLOAD_FAILED",
+                "Falha temporária ao enviar o ficheiro para o storage. Tenta novamente."
+        );
     }
 
     private static String buildStorageKey(
@@ -107,7 +142,7 @@ public class R2MediaStorageService {
         if (contentType == null) return "file";
         if (contentType.startsWith("image/")) return "image";
         if (contentType.startsWith("video/")) return "video";
-        if (contentType.equals("application/pdf")) return "document";
+        if (contentType.equals("application/pdf")) return "file";
         return "file";
     }
 

@@ -6,7 +6,7 @@ import pt.dot.application.api.dto.district.DistrictDto;
 import pt.dot.application.api.dto.district.DistrictUpdateRequest;
 import pt.dot.application.db.entity.District;
 import pt.dot.application.db.repo.DistrictRepository;
-import pt.dot.application.service.wikimedia.WikimediaMediaService;
+import pt.dot.application.service.media.MediaItemService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,14 +19,14 @@ public class DistrictService {
     private static final int MAX_FILES = 5;
 
     private final DistrictRepository districtRepository;
-    private final WikimediaMediaService wikimediaMediaService;
+    private final MediaItemService mediaItemService;
 
     public DistrictService(
             DistrictRepository districtRepository,
-            WikimediaMediaService wikimediaMediaService
+            MediaItemService mediaItemService
     ) {
         this.districtRepository = districtRepository;
-        this.wikimediaMediaService = wikimediaMediaService;
+        this.mediaItemService = mediaItemService;
     }
 
     @Transactional(readOnly = true)
@@ -69,8 +69,15 @@ public class DistrictService {
         if (payload.getParishesCount() != null) d.setParishesCount(payload.getParishesCount());
 
         if (payload.getFiles() != null) {
-            d.setFiles(normalizeStrings(payload.getFiles(), MAX_FILES));
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_DISTRICT,
+                    d.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    normalizeStrings(payload.getFiles(), MAX_FILES),
+                    MediaItemService.PROVIDER_MANUAL
+            );
         }
+
         if (payload.getSources() != null) {
             d.setSources(normalizeStrings(payload.getSources(), MAX_FILES));
         }
@@ -91,18 +98,18 @@ public class DistrictService {
                 d.getHistory(),
                 d.getMunicipalitiesCount(),
                 d.getParishesCount(),
-                null,
-                null
+                List.of(),
+                List.of()
         );
     }
 
     private DistrictDto toDistrictDtoWithFiles(District d) {
-        List<String> baseFiles = normalizeStrings(d.getFiles(), MAX_FILES);
-
-        String districtLabel = firstNonBlank(d.getNamePt(), d.getName());
-        List<String> finalFiles = (districtLabel == null || districtLabel.isBlank())
-                ? baseFiles
-                : wikimediaMediaService.getDistrictMedia5(districtLabel, baseFiles);
+        List<String> files = mediaItemService.getResolvedUrls(
+                MediaItemService.ENTITY_DISTRICT,
+                d.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                MAX_FILES
+        );
 
         return new DistrictDto(
                 d.getId(),
@@ -118,7 +125,7 @@ public class DistrictService {
                 d.getHistory(),
                 d.getMunicipalitiesCount(),
                 d.getParishesCount(),
-                finalFiles,
+                files,
                 normalizeStrings(d.getSources(), MAX_FILES)
         );
     }
@@ -135,11 +142,5 @@ public class DistrictService {
             if (out.size() >= limit) break;
         }
         return out;
-    }
-
-    private static String firstNonBlank(String a, String b) {
-        if (a != null && !a.trim().isBlank()) return a.trim();
-        if (b != null && !b.trim().isBlank()) return b.trim();
-        return null;
     }
 }

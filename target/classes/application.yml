@@ -80,6 +80,7 @@ ptdot:
 
   media:
     base-url: ${PTDOT_MEDIA_BASE_URL:https://pub-f401bb0bb80c4136bf61b8d4c5e88925.r2.dev}
+    max-upload-bytes: ${PTDOT_MEDIA_MAX_UPLOAD_BYTES:104857600}
     r2:
       enabled: ${PTDOT_MEDIA_R2_ENABLED:false}
       bucket: ${PTDOT_MEDIA_R2_BUCKET:ptdot-media-dev}
@@ -119,33 +120,13 @@ spring:
     hibernate:
       ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
 
-ptdot:
-  media:
-    base-url: ${PTDOT_MEDIA_BASE_URL:https://pub-f401bb0bb80c4136bf61b8d4c5e88925.r2.dev}
-    r2:
-      enabled: ${PTDOT_MEDIA_R2_ENABLED:true}
-      bucket: ${PTDOT_MEDIA_R2_BUCKET:ptdot-media-dev}
-      account-id: ${PTDOT_MEDIA_R2_ACCOUNT_ID:8ff825c7f2fd37cf0e32c6984f82620f}
-      endpoint: ${PTDOT_MEDIA_R2_ENDPOINT:https://8ff825c7f2fd37cf0e32c6984f82620f.r2.cloudflarestorage.com}
-      region: ${PTDOT_MEDIA_R2_REGION:auto}
-
----
-spring:
-  config:
-    activate:
-      on-profile: local
-
-  jpa:
-    show-sql: ${SHOW_SQL:true}
-    hibernate:
-      ddl-auto: ${HIBERNATE_DDL_AUTO:validate}
-
   flyway:
     baseline-on-migrate: ${FLYWAY_BASELINE_ON_MIGRATE:true}
 
 ptdot:
   media:
     base-url: ${PTDOT_MEDIA_BASE_URL:https://pub-f401bb0bb80c4136bf61b8d4c5e88925.r2.dev}
+    max-upload-bytes: ${PTDOT_MEDIA_MAX_UPLOAD_BYTES:104857600}
     r2:
       enabled: ${PTDOT_MEDIA_R2_ENABLED:true}
       bucket: ${PTDOT_MEDIA_R2_BUCKET:ptdot-media-dev}
@@ -180,6 +161,7 @@ spring:
 ptdot:
   media:
     base-url: ${PTDOT_MEDIA_BASE_URL}
+    max-upload-bytes: ${PTDOT_MEDIA_MAX_UPLOAD_BYTES:104857600}
     r2:
       enabled: ${PTDOT_MEDIA_R2_ENABLED:true}
       bucket: ${PTDOT_MEDIA_R2_BUCKET}

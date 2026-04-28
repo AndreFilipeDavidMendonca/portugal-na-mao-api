@@ -12,7 +12,6 @@ import pt.dot.application.db.repo.AppUserRepository;
 import pt.dot.application.db.repo.PoiRepository;
 import pt.dot.application.security.SecurityUtil;
 import pt.dot.application.service.media.MediaItemService;
-import pt.dot.application.service.wikimedia.WikimediaMediaService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,18 +32,15 @@ public class PoiService {
 
     private final PoiRepository poiRepository;
     private final AppUserRepository userRepository;
-    private final WikimediaMediaService wikimediaMediaService;
     private final MediaItemService mediaItemService;
 
     public PoiService(
             PoiRepository poiRepository,
             AppUserRepository userRepository,
-            WikimediaMediaService wikimediaMediaService,
             MediaItemService mediaItemService
     ) {
         this.poiRepository = poiRepository;
         this.userRepository = userRepository;
-        this.wikimediaMediaService = wikimediaMediaService;
         this.mediaItemService = mediaItemService;
     }
 
@@ -201,28 +197,19 @@ public class PoiService {
                 p.getExternalOsmId(),
                 p.getSource(),
                 null,
-                null
+                List.of()
         );
     }
 
     private PoiDto toDtoDetail(Poi p) {
         IdPair ids = idsOf(p);
 
-        List<String> storedGallery = mediaItemService.getResolvedUrls(
+        List<String> finalGallery = mediaItemService.getResolvedUrls(
                 MediaItemService.ENTITY_POI,
                 p.getId(),
                 MediaItemService.MEDIA_IMAGE,
                 MAX_IMAGES
         );
-
-        List<String> finalGallery = shouldEnrichWithCommons(p)
-                ? wikimediaMediaService.getPoiMedia5(
-                p.getNamePt(),
-                p.getName(),
-                p.getSource(),
-                storedGallery
-        )
-                : storedGallery;
 
         String primary = finalGallery.isEmpty() ? null : finalGallery.get(0);
 
@@ -244,12 +231,6 @@ public class PoiService {
                 primary,
                 finalGallery
         );
-    }
-
-    private boolean shouldEnrichWithCommons(Poi p) {
-        if (p == null) return false;
-        if (p.getOwner() != null) return false;
-        return !SOURCE_BUSINESS.equalsIgnoreCase(safe(p.getSource()));
     }
 
     private record IdPair(Long districtId, UUID ownerId) {}
