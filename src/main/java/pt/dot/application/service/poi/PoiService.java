@@ -7,11 +7,11 @@ import pt.dot.application.api.dto.poi.CreatePoiRequestDto;
 import pt.dot.application.api.dto.poi.PoiDto;
 import pt.dot.application.db.entity.AppUser;
 import pt.dot.application.db.entity.Poi;
-import pt.dot.application.db.entity.PoiImage;
 import pt.dot.application.db.enums.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
 import pt.dot.application.db.repo.PoiRepository;
 import pt.dot.application.security.SecurityUtil;
+import pt.dot.application.service.media.MediaItemService;
 import pt.dot.application.service.wikimedia.WikimediaMediaService;
 
 import java.util.ArrayList;
@@ -34,15 +34,18 @@ public class PoiService {
     private final PoiRepository poiRepository;
     private final AppUserRepository userRepository;
     private final WikimediaMediaService wikimediaMediaService;
+    private final MediaItemService mediaItemService;
 
     public PoiService(
             PoiRepository poiRepository,
             AppUserRepository userRepository,
-            WikimediaMediaService wikimediaMediaService
+            WikimediaMediaService wikimediaMediaService,
+            MediaItemService mediaItemService
     ) {
         this.poiRepository = poiRepository;
         this.userRepository = userRepository;
         this.wikimediaMediaService = wikimediaMediaService;
+        this.mediaItemService = mediaItemService;
     }
 
     @Transactional(readOnly = true)
@@ -82,11 +85,11 @@ public class PoiService {
             throw new ResponseStatusException(BAD_REQUEST, "Lat/Lon são obrigatórios");
         }
 
-        List<String> imagesB64 = normalizeImages(req.getImages());
+        List<String> images = normalizeImages(req.getImages());
 
         String primary = safeNull(req.getImage());
-        if (imagesB64.isEmpty() && primary != null) {
-            imagesB64 = List.of(primary);
+        if (images.isEmpty() && primary != null) {
+            images = List.of(primary);
         }
 
         Poi p = new Poi();
@@ -98,15 +101,16 @@ public class PoiService {
         p.setLat(req.getLat());
         p.setLon(req.getLon());
 
-        int pos = 0;
-        for (String b64 : imagesB64) {
-            PoiImage img = new PoiImage();
-            img.setPosition(pos++);
-            img.setData(b64);
-            p.addImage(img);
-        }
-
         Poi saved = poiRepository.saveAndFlush(p);
+
+        mediaItemService.replaceMedia(
+                MediaItemService.ENTITY_POI,
+                saved.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                images,
+                "manual"
+        );
+
         return saved.getId();
     }
 
@@ -154,15 +158,13 @@ public class PoiService {
 
         if (dto.getImages() != null) {
             List<String> images = normalizeImages(dto.getImages());
-            poi.clearImages();
-
-            int pos = 0;
-            for (String b64 : images) {
-                PoiImage img = new PoiImage();
-                img.setPosition(pos++);
-                img.setData(b64);
-                poi.addImage(img);
-            }
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_POI,
+                    poi.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    images,
+                    "manual"
+            );
             return;
         }
 
@@ -170,16 +172,13 @@ public class PoiService {
             String img0 = safeNull(dto.getImage());
             if (img0 == null) return;
 
-            if (poi.getImages().isEmpty()) {
-                PoiImage img = new PoiImage();
-                img.setPosition(0);
-                img.setData(img0);
-                poi.addImage(img);
-                return;
-            }
-
-            PoiImage first = poi.getImages().get(0);
-            first.setData(img0);
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_POI,
+                    poi.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    List.of(img0),
+                    "manual"
+            );
         }
     }
 
@@ -209,14 +208,12 @@ public class PoiService {
     private PoiDto toDtoDetail(Poi p) {
         IdPair ids = idsOf(p);
 
-        List<String> storedGallery = (p.getImages() == null
-                ? List.of()
-                : p.getImages().stream()
-                .map(PoiImage::getData)
-                .filter(v -> v != null && !v.isBlank())
-                .distinct()
-                .limit(MAX_IMAGES)
-                .toList());
+        List<String> storedGallery = mediaItemService.getResolvedUrls(
+                MediaItemService.ENTITY_POI,
+                p.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                MAX_IMAGES
+        );
 
         List<String> finalGallery = shouldEnrichWithCommons(p)
                 ? wikimediaMediaService.getPoiMedia5(

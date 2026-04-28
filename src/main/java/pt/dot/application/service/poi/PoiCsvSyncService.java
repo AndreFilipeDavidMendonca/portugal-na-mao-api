@@ -1,4 +1,4 @@
-// src/main/java/pt/dot/application/service/PoiCsvSyncService.java
+// src/main/java/pt/dot/application/service/poi/PoiCsvSyncService.java
 package pt.dot.application.service.poi;
 
 import org.apache.commons.csv.CSVFormat;
@@ -10,24 +10,35 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.dot.application.db.entity.Poi;
-import pt.dot.application.db.entity.PoiImage;
 import pt.dot.application.db.repo.PoiRepository;
+import pt.dot.application.service.media.MediaItemService;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class PoiCsvSyncService {
 
     private static final Logger log = LoggerFactory.getLogger(PoiCsvSyncService.class);
 
-    private final PoiRepository poiRepository;
+    private static final int MAX_CSV_IMAGES_PER_POI = 20;
 
-    public PoiCsvSyncService(PoiRepository poiRepository) {
+    private final PoiRepository poiRepository;
+    private final MediaItemService mediaItemService;
+
+    public PoiCsvSyncService(
+            PoiRepository poiRepository,
+            MediaItemService mediaItemService
+    ) {
         this.poiRepository = poiRepository;
+        this.mediaItemService = mediaItemService;
     }
 
     @Transactional
@@ -47,7 +58,10 @@ public class PoiCsvSyncService {
     private Map<Integer, Poi> importPois(Resource poisCsv) {
         Map<Integer, Poi> csvIdToPoi = new HashMap<>();
 
-        int total = 0, created = 0, updated = 0, skipped = 0;
+        int total = 0;
+        int created = 0;
+        int updated = 0;
+        int skipped = 0;
 
         List<Poi> toSave = new ArrayList<>();
 
@@ -83,7 +97,6 @@ public class PoiCsvSyncService {
                     continue;
                 }
 
-                // mínimos
                 if (isBlank(name) || lat == null || lon == null) {
                     skipped++;
                     continue;
@@ -91,7 +104,6 @@ public class PoiCsvSyncService {
 
                 Poi poi = null;
 
-                // MATCHING primário: SIPA ID
                 if (!isBlank(sipaId)) {
                     poi = poiRepository.findBySipaId(sipaId).orElse(null);
                 }
@@ -108,16 +120,11 @@ public class PoiCsvSyncService {
                 poi.setCategory(category);
                 poi.setSubcategory(subcategory);
                 poi.setDescription(description);
-
                 poi.setLat(lat);
                 poi.setLon(lon);
-
                 poi.setWikipediaUrl(wikipediaUrl);
                 poi.setSipaId(sipaId);
-
                 poi.setSource(!isBlank(source) ? source : "csv:pois");
-
-                // extra
                 poi.setArchitect(architect);
                 poi.setYearText(yearText);
 
@@ -125,7 +132,17 @@ public class PoiCsvSyncService {
                 csvIdToPoi.put(csvId, poi);
             }
 
-            poiRepository.saveAll(toSave);
+            List<Poi> savedPois = poiRepository.saveAll(toSave);
+
+            // Garante que os POIs novos têm ID antes de importImages().
+            // Como a ordem de saveAll tende a preservar a ordem de input, mantemos o map atualizado.
+            int i = 0;
+            for (Integer csvId : new ArrayList<>(csvIdToPoi.keySet())) {
+                if (i < savedPois.size()) {
+                    csvIdToPoi.put(csvId, savedPois.get(i));
+                }
+                i++;
+            }
 
             log.info("[PoiCsvSync] POIs | lidos={} | criados={} | atualizados={} | ignorados={}",
                     total, created, updated, skipped);
@@ -144,10 +161,12 @@ public class PoiCsvSyncService {
             return;
         }
 
-        int total = 0, attached = 0, missingPoi = 0, skipped = 0;
+        int total = 0;
+        int attached = 0;
+        int missingPoi = 0;
+        int skipped = 0;
 
-        // touched -> vamos saveAll no fim (cascade trata das imagens)
-        Set<Poi> touched = new HashSet<>();
+        Map<Long, LinkedHashSet<String>> imagesByPoiId = new HashMap<>();
 
         try (Reader reader = new BufferedReader(
                 new InputStreamReader(imagesCsv.getInputStream(), StandardCharsets.UTF_8))) {
@@ -171,42 +190,43 @@ public class PoiCsvSyncService {
                 }
 
                 Poi poi = poiByCsvId.get(csvId);
-                if (poi == null) {
+                if (poi == null || poi.getId() == null) {
                     missingPoi++;
                     continue;
                 }
 
-                // dedupe por "data" (aqui é URL do csv, mas funciona igual para base64)
-                LinkedHashSet<String> merged = new LinkedHashSet<>();
-                if (poi.getImages() != null) {
-                    for (PoiImage img : poi.getImages()) {
-                        if (img != null && !isBlank(img.getData())) merged.add(img.getData());
-                    }
-                }
-                merged.add(imageUrl);
-
-                int before = poi.getImages() != null ? poi.getImages().size() : 0;
-
-                // se não mudou, ignora
-                if (merged.size() == before) continue;
-
-                // substitui a coleção (orphanRemoval apaga as antigas)
-                poi.clearImages();
-                int pos = 0;
-                for (String data : merged) {
-                    PoiImage img = new PoiImage();
-                    img.setPosition(pos++);
-                    img.setData(data);
-                    poi.addImage(img);
-                }
-
-                touched.add(poi);
-                attached++;
+                imagesByPoiId
+                        .computeIfAbsent(poi.getId(), ignored -> new LinkedHashSet<>())
+                        .add(imageUrl);
             }
 
-            if (!touched.isEmpty()) {
-                // cascade ALL + orphanRemoval -> persiste imagens automaticamente
-                poiRepository.saveAll(touched);
+            for (Map.Entry<Long, LinkedHashSet<String>> entry : imagesByPoiId.entrySet()) {
+                Long poiId = entry.getKey();
+
+                List<String> existing = mediaItemService.getResolvedUrls(
+                        MediaItemService.ENTITY_POI,
+                        poiId,
+                        MediaItemService.MEDIA_IMAGE,
+                        MAX_CSV_IMAGES_PER_POI
+                );
+
+                LinkedHashSet<String> merged = new LinkedHashSet<>(existing);
+                merged.addAll(entry.getValue());
+
+                List<String> finalImages = merged.stream()
+                        .filter(v -> !isBlank(v))
+                        .limit(MAX_CSV_IMAGES_PER_POI)
+                        .toList();
+
+                mediaItemService.replaceMedia(
+                        MediaItemService.ENTITY_POI,
+                        poiId,
+                        MediaItemService.MEDIA_IMAGE,
+                        finalImages,
+                        "csv-import"
+                );
+
+                attached += entry.getValue().size();
             }
 
             log.info("[PoiCsvSync] Imagens | lidas={} | anexadas={} | poi_nao_encontrado={} | ignoradas={}",
@@ -217,8 +237,6 @@ public class PoiCsvSyncService {
             throw new RuntimeException("Erro ao importar imagens", e);
         }
     }
-
-    // ---------------- helpers ----------------
 
     private static String safeName(Resource r) {
         return r == null ? "null" : r.getDescription();
@@ -239,11 +257,19 @@ public class PoiCsvSyncService {
 
     private static Integer parseInt(String v) {
         if (isBlank(v)) return null;
-        try { return Integer.parseInt(v.trim()); } catch (Exception e) { return null; }
+        try {
+            return Integer.parseInt(v.trim());
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     private static Double parseDouble(String v) {
         if (isBlank(v)) return null;
-        try { return Double.parseDouble(v.trim().replace(",", ".")); } catch (Exception e) { return null; }
+        try {
+            return Double.parseDouble(v.trim().replace(",", "."));
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

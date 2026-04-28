@@ -53,6 +53,8 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/favorite/FavoriteController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/friendship/FriendshipController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/geocoding/GeocodingController.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/media/MediaController.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/media/MediaUploadResponseDto.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/poi/PoiCommentController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/poi/PoiController.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/api/search/SearchController.java
@@ -69,7 +71,6 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/MediaItem.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/Poi.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/PoiComment.java
-/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/entity/PoiImage.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/enums/ChatMessageType.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/enums/FriendshipStatus.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/enums/UserRole.java
@@ -79,8 +80,8 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/DistrictRepository.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/FavoriteRepository.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/FriendshipRepository.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/MediaItemRepository.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiCommentRepository.java
-/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiImageRepository.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiLiteView.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/db/repo/PoiRepository.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/exception/ApiException.java
@@ -102,6 +103,9 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/favorite/FavoriteService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/friendship/FriendshipService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/geocoding/GeocodingService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/MediaItemService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/MediaUrlService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/R2MediaStorageService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/poi/PoiCommentService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/poi/PoiCsvSyncService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/poi/PoiService.java

@@ -17,9 +17,6 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
 
     List<Poi> findByOwner_Id(UUID ownerId);
 
-    // -------------------------
-    // SEARCH (unaccent + contains + limit)
-    // -------------------------
     @Query(value = """
       select *
       from poi p
@@ -30,9 +27,6 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
     """, nativeQuery = true)
     List<Poi> searchByName(@Param("q") String q, @Param("limit") int limit);
 
-    // -------------------------
-    // LITE markers (bbox + category opcional)
-    // -------------------------
     @Query("""
         select
           p.id as id,
@@ -57,9 +51,6 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
             Pageable pageable
     );
 
-    // -------------------------
-    // FACETS (sempre sem filtro category)
-    // -------------------------
     @Query("""
         select p.category, count(p.id)
         from Poi p
@@ -75,8 +66,8 @@ public interface PoiRepository extends JpaRepository<Poi, Long> {
     );
 
     @Query("""
-        select p from Poi p
-        left join fetch p.images
+        select p
+        from Poi p
         where p.id = :id
     """)
     Optional<Poi> findByIdWithImages(@Param("id") Long id);
