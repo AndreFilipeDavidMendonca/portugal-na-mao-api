@@ -7,12 +7,12 @@ import pt.dot.application.api.dto.poi.CreatePoiRequestDto;
 import pt.dot.application.api.dto.poi.PoiDto;
 import pt.dot.application.db.entity.AppUser;
 import pt.dot.application.db.entity.Poi;
-import pt.dot.application.db.entity.PoiImage;
 import pt.dot.application.db.enums.UserRole;
 import pt.dot.application.db.repo.AppUserRepository;
 import pt.dot.application.db.repo.PoiRepository;
 import pt.dot.application.security.SecurityUtil;
-import pt.dot.application.service.wikimedia.WikimediaMediaService;
+import pt.dot.application.service.media.LazyWikimediaMediaService;
+import pt.dot.application.service.media.MediaItemService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,16 +33,19 @@ public class PoiService {
 
     private final PoiRepository poiRepository;
     private final AppUserRepository userRepository;
-    private final WikimediaMediaService wikimediaMediaService;
+    private final MediaItemService mediaItemService;
+    private final LazyWikimediaMediaService lazyWikimediaMediaService;
 
     public PoiService(
             PoiRepository poiRepository,
             AppUserRepository userRepository,
-            WikimediaMediaService wikimediaMediaService
+            MediaItemService mediaItemService,
+            LazyWikimediaMediaService lazyWikimediaMediaService
     ) {
         this.poiRepository = poiRepository;
         this.userRepository = userRepository;
-        this.wikimediaMediaService = wikimediaMediaService;
+        this.mediaItemService = mediaItemService;
+        this.lazyWikimediaMediaService = lazyWikimediaMediaService;
     }
 
     @Transactional(readOnly = true)
@@ -82,11 +85,11 @@ public class PoiService {
             throw new ResponseStatusException(BAD_REQUEST, "Lat/Lon são obrigatórios");
         }
 
-        List<String> imagesB64 = normalizeImages(req.getImages());
-
+        List<String> images = normalizeImages(req.getImages());
         String primary = safeNull(req.getImage());
-        if (imagesB64.isEmpty() && primary != null) {
-            imagesB64 = List.of(primary);
+
+        if (images.isEmpty() && primary != null) {
+            images = List.of(primary);
         }
 
         Poi p = new Poi();
@@ -98,15 +101,16 @@ public class PoiService {
         p.setLat(req.getLat());
         p.setLon(req.getLon());
 
-        int pos = 0;
-        for (String b64 : imagesB64) {
-            PoiImage img = new PoiImage();
-            img.setPosition(pos++);
-            img.setData(b64);
-            p.addImage(img);
-        }
-
         Poi saved = poiRepository.saveAndFlush(p);
+
+        mediaItemService.replaceMedia(
+                MediaItemService.ENTITY_POI,
+                saved.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                images,
+                MediaItemService.PROVIDER_MANUAL
+        );
+
         return saved.getId();
     }
 
@@ -114,10 +118,7 @@ public class PoiService {
         if (id == null) return Optional.empty();
 
         return poiRepository.findById(id).map(poi -> {
-            if (poi.getOwner() != null) {
-                requireOwnerOrAdmin(poi);
-            }
-
+            requireOwnerOrAdmin(poi);
             applyPatch(poi, dto);
 
             Poi saved = poiRepository.saveAndFlush(poi);
@@ -125,17 +126,19 @@ public class PoiService {
         });
     }
 
-    public void deleteBusinessPoi(Long id) {
+    public void deletePoi(Long id) {
         if (id == null) throw new ResponseStatusException(BAD_REQUEST, "ID em falta");
 
         Poi poi = poiRepository.findById(id)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "POI não encontrado"));
 
-        if (poi.getOwner() == null) {
-            throw new ResponseStatusException(FORBIDDEN, "Apenas POIs comerciais podem ser eliminados");
-        }
+        requireDeletePermission(poi);
 
-        requireOwnerOrAdmin(poi);
+        mediaItemService.deleteMediaAndStorage(
+                MediaItemService.ENTITY_POI,
+                poi.getId()
+        );
+
         poiRepository.delete(poi);
     }
 
@@ -153,16 +156,13 @@ public class PoiService {
         }
 
         if (dto.getImages() != null) {
-            List<String> images = normalizeImages(dto.getImages());
-            poi.clearImages();
-
-            int pos = 0;
-            for (String b64 : images) {
-                PoiImage img = new PoiImage();
-                img.setPosition(pos++);
-                img.setData(b64);
-                poi.addImage(img);
-            }
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_POI,
+                    poi.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    normalizeImages(dto.getImages()),
+                    MediaItemService.PROVIDER_MANUAL
+            );
             return;
         }
 
@@ -170,16 +170,13 @@ public class PoiService {
             String img0 = safeNull(dto.getImage());
             if (img0 == null) return;
 
-            if (poi.getImages().isEmpty()) {
-                PoiImage img = new PoiImage();
-                img.setPosition(0);
-                img.setData(img0);
-                poi.addImage(img);
-                return;
-            }
-
-            PoiImage first = poi.getImages().get(0);
-            first.setData(img0);
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_POI,
+                    poi.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    List.of(img0),
+                    MediaItemService.PROVIDER_MANUAL
+            );
         }
     }
 
@@ -202,30 +199,25 @@ public class PoiService {
                 p.getExternalOsmId(),
                 p.getSource(),
                 null,
-                null
+                List.of()
         );
     }
 
     private PoiDto toDtoDetail(Poi p) {
         IdPair ids = idsOf(p);
 
-        List<String> storedGallery = (p.getImages() == null
-                ? List.of()
-                : p.getImages().stream()
-                .map(PoiImage::getData)
-                .filter(v -> v != null && !v.isBlank())
-                .distinct()
-                .limit(MAX_IMAGES)
-                .toList());
+        List<String> lazyUrls = lazyWikimediaMediaService.ensurePoiImages(p);
 
-        List<String> finalGallery = shouldEnrichWithCommons(p)
-                ? wikimediaMediaService.getPoiMedia5(
-                p.getNamePt(),
-                p.getName(),
-                p.getSource(),
-                storedGallery
-        )
-                : storedGallery;
+        List<String> finalGallery = mediaItemService.getResolvedUrls(
+                MediaItemService.ENTITY_POI,
+                p.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                MAX_IMAGES
+        );
+
+        if (finalGallery.isEmpty() && !lazyUrls.isEmpty()) {
+            finalGallery = lazyUrls.stream().limit(MAX_IMAGES).toList();
+        }
 
         String primary = finalGallery.isEmpty() ? null : finalGallery.get(0);
 
@@ -249,18 +241,32 @@ public class PoiService {
         );
     }
 
-    private boolean shouldEnrichWithCommons(Poi p) {
-        if (p == null) return false;
-        if (p.getOwner() != null) return false;
-        return !SOURCE_BUSINESS.equalsIgnoreCase(safe(p.getSource()));
+    private void requireDeletePermission(Poi poi) {
+        AppUser me = requireMe();
+
+        boolean isAdmin = me.getRole() == UserRole.ADMIN;
+        boolean isBusinessOwner =
+                poi.getOwner() != null &&
+                        poi.getOwner().getId() != null &&
+                        poi.getOwner().getId().equals(me.getId());
+
+        if (!isAdmin && !isBusinessOwner) {
+            throw new ResponseStatusException(FORBIDDEN, "Sem permissão para eliminar este POI");
+        }
     }
 
-    private record IdPair(Long districtId, UUID ownerId) {}
+    private void requireOwnerOrAdmin(Poi poi) {
+        AppUser me = requireMe();
 
-    private static IdPair idsOf(Poi p) {
-        Long districtId = (p.getDistrict() != null ? p.getDistrict().getId() : null);
-        UUID ownerId = (p.getOwner() != null ? p.getOwner().getId() : null);
-        return new IdPair(districtId, ownerId);
+        boolean isAdmin = me.getRole() == UserRole.ADMIN;
+        boolean isOwner =
+                poi.getOwner() != null &&
+                        poi.getOwner().getId() != null &&
+                        poi.getOwner().getId().equals(me.getId());
+
+        if (!isOwner && !isAdmin) {
+            throw new ResponseStatusException(FORBIDDEN, "Sem permissão para editar este POI");
+        }
     }
 
     private AppUser requireMe() {
@@ -273,22 +279,37 @@ public class PoiService {
 
     private AppUser requireBusinessOrAdmin() {
         AppUser me = requireMe();
-        if (me.getRole() == UserRole.ADMIN) return me;
-        if (me.getRole() == UserRole.BUSINESS) return me;
+
+        if (me.getRole() == UserRole.ADMIN || me.getRole() == UserRole.BUSINESS) {
+            return me;
+        }
+
         throw new ResponseStatusException(FORBIDDEN, "Apenas contas comerciais podem criar POIs");
     }
 
-    private void requireOwnerOrAdmin(Poi poi) {
-        AppUser me = requireMe();
+    private record IdPair(Long districtId, UUID ownerId) {
+    }
 
-        boolean isAdmin = me.getRole() == UserRole.ADMIN;
-        boolean isOwner = poi.getOwner() != null
-                && poi.getOwner().getId() != null
-                && poi.getOwner().getId().equals(me.getId());
+    private static IdPair idsOf(Poi p) {
+        Long districtId = p.getDistrict() != null ? p.getDistrict().getId() : null;
+        UUID ownerId = p.getOwner() != null ? p.getOwner().getId() : null;
+        return new IdPair(districtId, ownerId);
+    }
 
-        if (!isOwner && !isAdmin) {
-            throw new ResponseStatusException(FORBIDDEN, "Sem permissão para editar este POI");
+    private static List<String> normalizeImages(List<String> images) {
+        if (images == null || images.isEmpty()) return new ArrayList<>();
+
+        List<String> out = new ArrayList<>();
+
+        for (String it : images) {
+            String v = safeNull(it);
+            if (v == null) continue;
+
+            if (!out.contains(v)) out.add(v);
+            if (out.size() >= MAX_IMAGES) break;
         }
+
+        return out;
     }
 
     private static String safe(String s) {
@@ -298,18 +319,5 @@ public class PoiService {
     private static String safeNull(String s) {
         String t = safe(s);
         return t.isBlank() ? null : t;
-    }
-
-    private static List<String> normalizeImages(List<String> images) {
-        if (images == null || images.isEmpty()) return new ArrayList<>();
-
-        List<String> out = new ArrayList<>();
-        for (String it : images) {
-            String v = safeNull(it);
-            if (v == null) continue;
-            if (!out.contains(v)) out.add(v);
-            if (out.size() >= MAX_IMAGES) break;
-        }
-        return out;
     }
 }

@@ -65,6 +65,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/geocode").authenticated()
 
                         .requestMatchers("/api/chat/**").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/media/upload").authenticated()
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
