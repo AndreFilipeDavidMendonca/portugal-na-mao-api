@@ -9,6 +9,7 @@ import pt.dot.application.exception.Errors;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 
 @Service
 @Transactional
@@ -178,7 +179,7 @@ public class MediaItemService {
 
         String normalizedEntityType = normalizeUpper(entityType, "MISC");
         String normalizedMediaType = normalizeUpper(mediaType, MEDIA_FILE);
-        String normalizedProvider = normalizeLower(provider, PROVIDER_MANUAL);
+        String normalizedProvider = normalizeLower(provider);
 
         List<String> nextKeys = normalizeKeys(storageKeys);
 
@@ -272,7 +273,7 @@ public class MediaItemService {
     private int nextPosition(String entityType, Long entityId) {
         return mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(entityType, entityId).stream()
                 .map(MediaItem::getPosition)
-                .filter(v -> v != null)
+                .filter(Objects::nonNull)
                 .max(Integer::compareTo)
                 .map(v -> v + 1)
                 .orElse(0);
@@ -301,9 +302,9 @@ public class MediaItemService {
         return v.trim().toUpperCase(Locale.ROOT);
     }
 
-    private static String normalizeLower(String value, String fallback) {
-        String v = value == null || value.isBlank() ? fallback : value;
-        if (v == null || v.isBlank()) return null;
+    private static String normalizeLower(String value) {
+        String v = value == null || value.isBlank() ? MediaItemService.PROVIDER_MANUAL : value;
+        if (v.isBlank()) return null;
         return v.trim().toLowerCase(Locale.ROOT);
     }
 

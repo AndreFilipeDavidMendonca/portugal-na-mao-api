@@ -77,13 +77,13 @@ public class DistrictService {
                     MediaItemService.ENTITY_DISTRICT,
                     d.getId(),
                     MediaItemService.MEDIA_IMAGE,
-                    normalizeStrings(payload.getFiles(), MAX_FILES),
+                    normalizeStrings(payload.getFiles()),
                     MediaItemService.PROVIDER_MANUAL
             );
         }
 
         if (payload.getSources() != null) {
-            d.setSources(normalizeStrings(payload.getSources(), MAX_FILES));
+            d.setSources(normalizeStrings(payload.getSources()));
         }
     }
 
@@ -136,11 +136,11 @@ public class DistrictService {
                 d.getMunicipalitiesCount(),
                 d.getParishesCount(),
                 files,
-                normalizeStrings(d.getSources(), MAX_FILES)
+                normalizeStrings(d.getSources())
         );
     }
 
-    private static List<String> normalizeStrings(List<String> input, int limit) {
+    private static List<String> normalizeStrings(List<String> input) {
         if (input == null || input.isEmpty()) return List.of();
 
         List<String> out = new ArrayList<>();
@@ -152,7 +152,7 @@ public class DistrictService {
             if (v.isBlank()) continue;
 
             if (!out.contains(v)) out.add(v);
-            if (out.size() >= limit) break;
+            if (out.size() >= DistrictService.MAX_FILES) break;
         }
 
         return out;
