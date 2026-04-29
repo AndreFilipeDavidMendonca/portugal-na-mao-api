@@ -10,6 +10,4 @@ public interface MediaItemRepository extends JpaRepository<MediaItem, Long> {
     List<MediaItem> findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(String entityType, Long entityId);
 
     boolean existsByEntityTypeAndEntityIdAndMediaType(String entityType, Long entityId, String mediaType);
-
-    void deleteByEntityTypeAndEntityIdAndMediaType(String entityType, Long entityId, String mediaType);
 }

@@ -231,27 +231,6 @@ public class MediaItemService {
         deleteItemsAndStorage(items);
     }
 
-    public void deleteMediaAndStorage(String entityType, Long entityId, String mediaType) {
-        if (entityId == null) return;
-
-        String normalizedEntityType = normalizeUpper(entityType, null);
-        String normalizedMediaType = normalizeUpper(mediaType, null);
-        if (normalizedEntityType == null) return;
-
-        List<MediaItem> items = mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(
-                normalizedEntityType,
-                entityId
-        );
-
-        if (normalizedMediaType != null) {
-            items = items.stream()
-                    .filter(item -> normalizedMediaType.equalsIgnoreCase(item.getMediaType()))
-                    .toList();
-        }
-
-        deleteItemsAndStorage(items);
-    }
-
     private void deleteItemsAndStorage(List<MediaItem> items) {
         if (items == null || items.isEmpty()) return;
 
