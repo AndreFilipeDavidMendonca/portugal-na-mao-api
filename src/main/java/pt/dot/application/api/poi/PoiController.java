@@ -20,19 +20,16 @@ public class PoiController {
         this.poiService = poiService;
     }
 
-    /** Lista tudo (leve: sem galeria) */
     @GetMapping
     public List<PoiDto> listAll() {
         return poiService.findAll();
     }
 
-    /** Lista “meus POIs” (leve: sem galeria) */
     @GetMapping("/mine")
     public List<PoiDto> mine() {
         return poiService.findMine();
     }
 
-    /** Detalhe por SIPA (inclui galeria/enrichment se aplicável) */
     @GetMapping("/by-sipa/{sipaId}")
     public ResponseEntity<PoiDto> getBySipaId(@PathVariable String sipaId) {
         return poiService.findBySipaId(sipaId)
@@ -40,7 +37,6 @@ public class PoiController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Detalhe por ID (inclui galeria/enrichment se aplicável) */
     @GetMapping("/{id}")
     public ResponseEntity<PoiDto> getById(@PathVariable Long id) {
         return poiService.findById(id)
@@ -48,7 +44,6 @@ public class PoiController {
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
-    /** Criar POI comercial (resposta leve: devolve só o id) */
     @PostMapping
     public ResponseEntity<Map<String, Long>> create(@RequestBody CreatePoiRequestDto req) {
         Long id = poiService.createBusinessPoi(req);
@@ -57,7 +52,6 @@ public class PoiController {
                 .body(Map.of("id", id));
     }
 
-    /** Update (admin ou owner em comerciais) */
     @PutMapping("/{id}")
     public ResponseEntity<PoiDto> update(
             @PathVariable Long id,
@@ -70,7 +64,7 @@ public class PoiController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
-        poiService.deleteBusinessPoi(id);
+        poiService.deletePoi(id);
         return ResponseEntity.noContent().build();
     }
 }

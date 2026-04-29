@@ -6,7 +6,8 @@ import pt.dot.application.api.dto.district.DistrictDto;
 import pt.dot.application.api.dto.district.DistrictUpdateRequest;
 import pt.dot.application.db.entity.District;
 import pt.dot.application.db.repo.DistrictRepository;
-import pt.dot.application.service.wikimedia.WikimediaMediaService;
+import pt.dot.application.service.media.LazyWikimediaMediaService;
+import pt.dot.application.service.media.MediaItemService;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,14 +20,17 @@ public class DistrictService {
     private static final int MAX_FILES = 5;
 
     private final DistrictRepository districtRepository;
-    private final WikimediaMediaService wikimediaMediaService;
+    private final MediaItemService mediaItemService;
+    private final LazyWikimediaMediaService lazyWikimediaMediaService;
 
     public DistrictService(
             DistrictRepository districtRepository,
-            WikimediaMediaService wikimediaMediaService
+            MediaItemService mediaItemService,
+            LazyWikimediaMediaService lazyWikimediaMediaService
     ) {
         this.districtRepository = districtRepository;
-        this.wikimediaMediaService = wikimediaMediaService;
+        this.mediaItemService = mediaItemService;
+        this.lazyWikimediaMediaService = lazyWikimediaMediaService;
     }
 
     @Transactional(readOnly = true)
@@ -69,10 +73,17 @@ public class DistrictService {
         if (payload.getParishesCount() != null) d.setParishesCount(payload.getParishesCount());
 
         if (payload.getFiles() != null) {
-            d.setFiles(normalizeStrings(payload.getFiles(), MAX_FILES));
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_DISTRICT,
+                    d.getId(),
+                    MediaItemService.MEDIA_IMAGE,
+                    normalizeStrings(payload.getFiles()),
+                    MediaItemService.PROVIDER_MANUAL
+            );
         }
+
         if (payload.getSources() != null) {
-            d.setSources(normalizeStrings(payload.getSources(), MAX_FILES));
+            d.setSources(normalizeStrings(payload.getSources()));
         }
     }
 
@@ -91,18 +102,24 @@ public class DistrictService {
                 d.getHistory(),
                 d.getMunicipalitiesCount(),
                 d.getParishesCount(),
-                null,
-                null
+                List.of(),
+                List.of()
         );
     }
 
     private DistrictDto toDistrictDtoWithFiles(District d) {
-        List<String> baseFiles = normalizeStrings(d.getFiles(), MAX_FILES);
+        List<String> lazyUrls = lazyWikimediaMediaService.ensureDistrictImages(d);
 
-        String districtLabel = firstNonBlank(d.getNamePt(), d.getName());
-        List<String> finalFiles = (districtLabel == null || districtLabel.isBlank())
-                ? baseFiles
-                : wikimediaMediaService.getDistrictMedia5(districtLabel, baseFiles);
+        List<String> files = mediaItemService.getResolvedUrls(
+                MediaItemService.ENTITY_DISTRICT,
+                d.getId(),
+                MediaItemService.MEDIA_IMAGE,
+                MAX_FILES
+        );
+
+        if (files.isEmpty() && !lazyUrls.isEmpty()) {
+            files = lazyUrls.stream().limit(MAX_FILES).toList();
+        }
 
         return new DistrictDto(
                 d.getId(),
@@ -118,28 +135,26 @@ public class DistrictService {
                 d.getHistory(),
                 d.getMunicipalitiesCount(),
                 d.getParishesCount(),
-                finalFiles,
-                normalizeStrings(d.getSources(), MAX_FILES)
+                files,
+                normalizeStrings(d.getSources())
         );
     }
 
-    private static List<String> normalizeStrings(List<String> input, int limit) {
+    private static List<String> normalizeStrings(List<String> input) {
         if (input == null || input.isEmpty()) return List.of();
 
         List<String> out = new ArrayList<>();
+
         for (String s : input) {
             if (s == null) continue;
+
             String v = s.trim();
             if (v.isBlank()) continue;
-            if (!out.contains(v)) out.add(v);
-            if (out.size() >= limit) break;
-        }
-        return out;
-    }
 
-    private static String firstNonBlank(String a, String b) {
-        if (a != null && !a.trim().isBlank()) return a.trim();
-        if (b != null && !b.trim().isBlank()) return b.trim();
-        return null;
+            if (!out.contains(v)) out.add(v);
+            if (out.size() >= DistrictService.MAX_FILES) break;
+        }
+
+        return out;
     }
 }

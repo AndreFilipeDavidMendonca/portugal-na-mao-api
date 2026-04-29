@@ -31,6 +31,7 @@
 
         <netty.macos.version>4.1.114.Final</netty.macos.version>
         <jjwt.version>0.12.5</jjwt.version>
+        <aws.sdk.version>2.25.60</aws.sdk.version>
     </properties>
 
     <dependencies>
@@ -119,6 +120,13 @@
             <groupId>org.apache.commons</groupId>
             <artifactId>commons-csv</artifactId>
             <version>${commons.csv.version}</version>
+        </dependency>
+
+        <!-- ========= Cloudflare R2 / S3-compatible storage ========= -->
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+            <version>${aws.sdk.version}</version>
         </dependency>
 
         <!-- ========= Jackson ========= -->

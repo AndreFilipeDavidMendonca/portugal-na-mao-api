@@ -1,6 +1,9 @@
 pt/dot/application/api/dto/CurrentUserDto.class
+pt/dot/application/db/repo/MediaItemRepository.class
 pt/dot/application/security/SecurityConfig.class
 pt/dot/application/api/dto/favorite/FavoriteDto.class
+pt/dot/application/service/media/MediaUrlService.class
+pt/dot/application/service/media/R2MediaStorageService.class
 pt/dot/application/api/dto/chat/SharePoiRequestDto.class
 pt/dot/application/api/dto/auth/UpdateCurrentUserRequestDto.class
 pt/dot/application/db/repo/FavoriteRepository.class
@@ -51,6 +54,7 @@ pt/dot/application/api/district/DistrictController.class
 pt/dot/application/exception/ErrorResponse.class
 pt/dot/application/db/repo/ChatConversationRepository.class
 pt/dot/application/sipa/PoiCsvSyncRunner.class
+pt/dot/application/service/media/MediaItemService.class
 pt/dot/application/api/dto/DistrictDto.class
 pt/dot/application/exception/GlobalExceptionHandler.class
 pt/dot/application/api/poi/PoiCommentController.class
@@ -68,6 +72,7 @@ pt/dot/application/api/dto/PoiDto.class
 pt/dot/application/db/repo/AppUserRepository.class
 pt/dot/application/api/dto/CreatePoiRequestDto.class
 pt/dot/application/service/district/DistrictFilesCsvImportService$ImportResult.class
+pt/dot/application/service/media/LazyWikimediaMediaService.class
 pt/dot/application/db/enums/ChatMessageType.class
 pt/dot/application/api/dto/LoginRequestDto.class
 pt/dot/application/api/dto/friendship/FriendRequestResponseDto.class
@@ -89,12 +94,13 @@ pt/dot/application/api/dto/chat/UnreadChatsSummaryDto.class
 pt/dot/application/service/favorite/FavoriteService.class
 pt/dot/application/api/favorite/FavoriteController.class
 pt/dot/application/db/enums/FriendshipStatus.class
+pt/dot/application/api/media/MediaUploadResponseDto.class
 pt/dot/application/api/auth/AuthController.class
 pt/dot/application/db/repo/PoiRepository.class
 pt/dot/application/api/dto/CommonsMediaDto.class
 pt/dot/application/api/chat/ChatController.class
 pt/dot/application/db/entity/AppUser.class
-pt/dot/application/db/entity/PoiImage.class
+pt/dot/application/service/media/R2MediaStorageService$UploadResult.class
 pt/dot/application/api/dto/poi/PoiCommentDto.class
 pt/dot/application/db/entity/PoiComment.class
 pt/dot/application/api/dto/geocoding/GeocodeRequestDto.class
@@ -104,7 +110,6 @@ pt/dot/application/api/auth/AuthController$AuthResponse.class
 pt/dot/application/service/geocoding/GeocodingService$QueryAttempt.class
 pt/dot/application/db/entity/Favorite.class
 pt/dot/application/api/dto/favorite/FavoriteStatusDto.class
-pt/dot/application/db/repo/PoiImageRepository.class
 pt/dot/application/api/dto/GeocodeResponseDto.class
 pt/dot/application/config/BootstrapFlywayConfig.class
 pt/dot/application/security/JwtAuthFilter.class
@@ -118,7 +123,9 @@ pt/dot/application/api/dto/search/SearchItemDto.class
 pt/dot/application/db/repo/PoiCommentRepository.class
 pt/dot/application/api/dto/poi/CreatePoiCommentRequest.class
 pt/dot/application/api/dto/PoiLiteDto.class
+pt/dot/application/service/media/LazyWikimediaMediaService$DownloadedMedia.class
 pt/dot/application/service/search/SearchService.class
+pt/dot/application/api/media/MediaController.class
 pt/dot/application/service/poi/PoiCsvSyncService.class
 pt/dot/application/api/dto/FavoriteDto.class
 pt/dot/application/api/dto/common/CommonsMediaDto.class

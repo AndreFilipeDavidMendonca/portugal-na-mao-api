@@ -13,28 +13,39 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import pt.dot.application.db.entity.District;
 import pt.dot.application.db.repo.DistrictRepository;
+import pt.dot.application.service.media.MediaItemService;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
 import java.nio.charset.StandardCharsets;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class DistrictFilesCsvImportService {
 
     private static final Logger log = LoggerFactory.getLogger(DistrictFilesCsvImportService.class);
+    private static final int MAX_DISTRICT_FILES = 20;
 
     private final DistrictRepository districtRepository;
+    private final MediaItemService mediaItemService;
     private final ResourceLoader resourceLoader;
     private final String csvPath;
 
     public DistrictFilesCsvImportService(
             DistrictRepository districtRepository,
+            MediaItemService mediaItemService,
             ResourceLoader resourceLoader,
             @Value("${ptdot.sipa.district-files-csv-path:classpath:/sipa/district_files.csv}") String csvPath
     ) {
         this.districtRepository = districtRepository;
+        this.mediaItemService = mediaItemService;
         this.resourceLoader = resourceLoader;
         this.csvPath = csvPath;
     }
@@ -52,8 +63,6 @@ public class DistrictFilesCsvImportService {
      * districtNamePt ; fileUrl
      * ou
      * districtNamePt , fileUrl
-     *
-     * Aqui o "texto rico" não costuma existir, mas usamos commons-csv para suportar quotes.
      */
     @Transactional
     public ImportResult importFromCsv() {
@@ -70,7 +79,7 @@ public class DistrictFilesCsvImportService {
         int missingDistricts = 0;
         int invalidLines = 0;
 
-        Map<Long, District> dirty = new LinkedHashMap<>();
+        Map<Long, LinkedHashSet<String>> filesByDistrictId = new LinkedHashMap<>();
 
         char delimiter = detectDelimiter(res);
 
@@ -99,7 +108,7 @@ public class DistrictFilesCsvImportService {
                     maybeHeader = false;
                     String l = (dName + " " + fileUrl).toLowerCase(Locale.ROOT);
                     if (l.contains("district") || l.contains("name") || l.contains("ficheiro") || l.contains("file")) {
-                        continue; // header
+                        continue;
                     }
                 }
 
@@ -120,30 +129,54 @@ public class DistrictFilesCsvImportService {
                 }
 
                 District d = opt.get();
-                if (d.getFiles() == null) d.setFiles(new ArrayList<>());
-
-                if (!d.getFiles().contains(fileUrl)) {
-                    d.getFiles().add(fileUrl);
-                    attachedFiles++;
-                    dirty.put(d.getId(), d);
+                if (d.getId() == null) {
+                    missingDistricts++;
+                    continue;
                 }
+
+                filesByDistrictId
+                        .computeIfAbsent(d.getId(), ignored -> new LinkedHashSet<>())
+                        .add(fileUrl);
+
+                attachedFiles++;
             }
 
         } catch (Exception e) {
             throw new IllegalStateException("[DistrictFilesCsvImport] Erro a ler/importar CSV", e);
         }
 
-        if (!dirty.isEmpty()) {
-            districtRepository.saveAll(dirty.values());
+        for (Map.Entry<Long, LinkedHashSet<String>> entry : filesByDistrictId.entrySet()) {
+            Long districtId = entry.getKey();
+
+            List<String> existing = mediaItemService.getStorageKeys(
+                    MediaItemService.ENTITY_DISTRICT,
+                    districtId,
+                    MediaItemService.MEDIA_IMAGE,
+                    MAX_DISTRICT_FILES
+            );
+
+            LinkedHashSet<String> merged = new LinkedHashSet<>(existing);
+            merged.addAll(entry.getValue());
+
+            List<String> finalFiles = merged.stream()
+                    .filter(v -> !isBlank(v))
+                    .limit(MAX_DISTRICT_FILES)
+                    .toList();
+
+            mediaItemService.replaceMedia(
+                    MediaItemService.ENTITY_DISTRICT,
+                    districtId,
+                    MediaItemService.MEDIA_IMAGE,
+                    finalFiles,
+                    MediaItemService.PROVIDER_CSV
+            );
         }
 
         log.info("[DistrictFilesCsvImport] Concluído (lines={}, updatedDistricts={}, attached={}, missingDistricts={}, invalidLines={})",
-                totalLines, dirty.size(), attachedFiles, missingDistricts, invalidLines);
+                totalLines, filesByDistrictId.size(), attachedFiles, missingDistricts, invalidLines);
 
-        return new ImportResult(totalLines, dirty.size(), attachedFiles, missingDistricts, invalidLines);
+        return new ImportResult(totalLines, filesByDistrictId.size(), attachedFiles, missingDistricts, invalidLines);
     }
-
-    // -------- helpers --------
 
     private static String safeGet(CSVRecord r, int idx) {
         if (idx >= r.size()) return "";

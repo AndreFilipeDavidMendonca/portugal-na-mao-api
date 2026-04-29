@@ -1,14 +1,10 @@
-// src/main/java/pt/dot/application/db/entity/Poi.java
 package pt.dot.application.db.entity;
 
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
-import pt.dot.application.db.converter.StringListConverter;
 
 import java.time.Instant;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 
 @Getter
@@ -64,6 +60,7 @@ public class Poi {
 
     @Setter
     private Double lat;
+
     @Setter
     private Double lon;
 
@@ -85,27 +82,9 @@ public class Poi {
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt = Instant.now();
 
-    @OneToMany(
-            mappedBy = "poi",
-            cascade = CascadeType.ALL,
-            orphanRemoval = true,
-            fetch = FetchType.LAZY
-    )
-    @OrderBy("position ASC")
-    private List<PoiImage> images = new ArrayList<>();
-
     @PreUpdate
     public void touchUpdatedAt() {
         this.updatedAt = Instant.now();
-    }
-
-    public void addImage(PoiImage img) {
-        img.setPoi(this);
-        this.images.add(img);
-    }
-
-    public void clearImages() {
-        this.images.clear();
     }
 
     @Override
