@@ -21,3 +21,5 @@ logs/
 
 *.dump
 *.backup
+
+ptdot-ops-private.env
