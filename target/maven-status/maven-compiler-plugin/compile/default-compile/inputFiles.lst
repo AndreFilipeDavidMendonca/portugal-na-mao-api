@@ -103,6 +103,7 @@
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/favorite/FavoriteService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/friendship/FriendshipService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/geocoding/GeocodingService.java
+/Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/LazyWikimediaMediaService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/MediaItemService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/MediaUrlService.java
 /Users/andre.mendonca/IdeaProjects/portugal-na-mao-api/src/main/java/pt/dot/application/service/media/R2MediaStorageService.java

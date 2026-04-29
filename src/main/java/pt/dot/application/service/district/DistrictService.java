@@ -6,6 +6,7 @@ import pt.dot.application.api.dto.district.DistrictDto;
 import pt.dot.application.api.dto.district.DistrictUpdateRequest;
 import pt.dot.application.db.entity.District;
 import pt.dot.application.db.repo.DistrictRepository;
+import pt.dot.application.service.media.LazyWikimediaMediaService;
 import pt.dot.application.service.media.MediaItemService;
 
 import java.util.ArrayList;
@@ -20,13 +21,16 @@ public class DistrictService {
 
     private final DistrictRepository districtRepository;
     private final MediaItemService mediaItemService;
+    private final LazyWikimediaMediaService lazyWikimediaMediaService;
 
     public DistrictService(
             DistrictRepository districtRepository,
-            MediaItemService mediaItemService
+            MediaItemService mediaItemService,
+            LazyWikimediaMediaService lazyWikimediaMediaService
     ) {
         this.districtRepository = districtRepository;
         this.mediaItemService = mediaItemService;
+        this.lazyWikimediaMediaService = lazyWikimediaMediaService;
     }
 
     @Transactional(readOnly = true)
@@ -104,12 +108,18 @@ public class DistrictService {
     }
 
     private DistrictDto toDistrictDtoWithFiles(District d) {
+        List<String> lazyUrls = lazyWikimediaMediaService.ensureDistrictImages(d);
+
         List<String> files = mediaItemService.getResolvedUrls(
                 MediaItemService.ENTITY_DISTRICT,
                 d.getId(),
                 MediaItemService.MEDIA_IMAGE,
                 MAX_FILES
         );
+
+        if (files.isEmpty() && !lazyUrls.isEmpty()) {
+            files = lazyUrls.stream().limit(MAX_FILES).toList();
+        }
 
         return new DistrictDto(
                 d.getId(),
@@ -134,13 +144,17 @@ public class DistrictService {
         if (input == null || input.isEmpty()) return List.of();
 
         List<String> out = new ArrayList<>();
+
         for (String s : input) {
             if (s == null) continue;
+
             String v = s.trim();
             if (v.isBlank()) continue;
+
             if (!out.contains(v)) out.add(v);
             if (out.size() >= limit) break;
         }
+
         return out;
     }
 }

@@ -81,6 +81,9 @@ ptdot:
   media:
     base-url: ${PTDOT_MEDIA_BASE_URL:https://pub-f401bb0bb80c4136bf61b8d4c5e88925.r2.dev}
     max-upload-bytes: ${PTDOT_MEDIA_MAX_UPLOAD_BYTES:104857600}
+    lazy-wikimedia:
+      enabled: ${PTDOT_MEDIA_LAZY_WIKIMEDIA_ENABLED:false}
+      max-per-entity: ${PTDOT_MEDIA_LAZY_WIKIMEDIA_MAX_PER_ENTITY:5}
     r2:
       enabled: ${PTDOT_MEDIA_R2_ENABLED:false}
       bucket: ${PTDOT_MEDIA_R2_BUCKET:ptdot-media-dev}

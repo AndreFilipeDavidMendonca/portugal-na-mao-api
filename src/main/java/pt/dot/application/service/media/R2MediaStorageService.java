@@ -93,6 +93,54 @@ public class R2MediaStorageService {
         return new UploadResult(key, baseUrl + "/" + key, contentType, file.getSize());
     }
 
+    public UploadResult uploadBytes(
+            byte[] bytes,
+            String originalFilename,
+            String contentType,
+            String entityType,
+            Long entityId,
+            String mediaType
+    ) {
+        if (!enabled) {
+            throw Errors.conflict("R2_DISABLED", "Upload para R2 está desativado neste ambiente.");
+        }
+
+        if (bytes == null || bytes.length == 0) {
+            throw Errors.badRequest("MEDIA_FILE_REQUIRED", "Ficheiro em falta.");
+        }
+
+        if (bytes.length > maxUploadBytes) {
+            throw Errors.badRequest("MEDIA_FILE_TOO_LARGE", "Ficheiro demasiado grande.");
+        }
+
+        String normalizedContentType = normalizeContentType(contentType);
+        String key = buildStorageKey(entityType, entityId, mediaType, originalFilename, normalizedContentType);
+
+        try {
+            PutObjectRequest request = PutObjectRequest.builder()
+                    .bucket(bucket)
+                    .key(key)
+                    .contentType(normalizedContentType)
+                    .build();
+
+            s3Client.putObject(request, RequestBody.fromBytes(bytes));
+        } catch (S3Exception ex) {
+            throw mapS3Exception(ex);
+        }
+
+        return new UploadResult(key, baseUrl + "/" + key, normalizedContentType, bytes.length);
+    }
+
+    public void deleteObject(String storageKey) {
+        if (!enabled) return;
+        if (storageKey == null || storageKey.trim().isBlank()) return;
+
+        s3Client.deleteObject(builder -> builder
+                .bucket(bucket)
+                .key(storageKey.trim())
+        );
+    }
+
     private static RuntimeException mapS3Exception(S3Exception ex) {
         int status = ex.statusCode();
 

@@ -72,6 +72,7 @@ pt/dot/application/api/dto/PoiDto.class
 pt/dot/application/db/repo/AppUserRepository.class
 pt/dot/application/api/dto/CreatePoiRequestDto.class
 pt/dot/application/service/district/DistrictFilesCsvImportService$ImportResult.class
+pt/dot/application/service/media/LazyWikimediaMediaService.class
 pt/dot/application/db/enums/ChatMessageType.class
 pt/dot/application/api/dto/LoginRequestDto.class
 pt/dot/application/api/dto/friendship/FriendRequestResponseDto.class
@@ -122,6 +123,7 @@ pt/dot/application/api/dto/search/SearchItemDto.class
 pt/dot/application/db/repo/PoiCommentRepository.class
 pt/dot/application/api/dto/poi/CreatePoiCommentRequest.class
 pt/dot/application/api/dto/PoiLiteDto.class
+pt/dot/application/service/media/LazyWikimediaMediaService$DownloadedMedia.class
 pt/dot/application/service/search/SearchService.class
 pt/dot/application/api/media/MediaController.class
 pt/dot/application/service/poi/PoiCsvSyncService.class

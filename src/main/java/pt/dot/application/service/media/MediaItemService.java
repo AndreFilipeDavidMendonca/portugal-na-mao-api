@@ -28,13 +28,16 @@ public class MediaItemService {
 
     private final MediaItemRepository mediaItemRepository;
     private final MediaUrlService mediaUrlService;
+    private final R2MediaStorageService r2MediaStorageService;
 
     public MediaItemService(
             MediaItemRepository mediaItemRepository,
-            MediaUrlService mediaUrlService
+            MediaUrlService mediaUrlService,
+            R2MediaStorageService r2MediaStorageService
     ) {
         this.mediaItemRepository = mediaItemRepository;
         this.mediaUrlService = mediaUrlService;
+        this.r2MediaStorageService = r2MediaStorageService;
     }
 
     @Transactional(readOnly = true)
@@ -43,8 +46,9 @@ public class MediaItemService {
 
         String normalizedEntityType = normalizeUpper(entityType, null);
         String normalizedMediaType = normalizeUpper(mediaType, null);
-        int max = limit <= 0 ? Integer.MAX_VALUE : limit;
+        if (normalizedEntityType == null) return List.of();
 
+        int max = limit <= 0 ? Integer.MAX_VALUE : limit;
         List<String> out = new ArrayList<>();
 
         for (MediaItem item : mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(normalizedEntityType, entityId)) {
@@ -66,8 +70,9 @@ public class MediaItemService {
 
         String normalizedEntityType = normalizeUpper(entityType, null);
         String normalizedMediaType = normalizeUpper(mediaType, null);
-        int max = limit <= 0 ? Integer.MAX_VALUE : limit;
+        if (normalizedEntityType == null) return List.of();
 
+        int max = limit <= 0 ? Integer.MAX_VALUE : limit;
         List<String> out = new ArrayList<>();
 
         for (MediaItem item : mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(normalizedEntityType, entityId)) {
@@ -81,6 +86,50 @@ public class MediaItemService {
         }
 
         return out;
+    }
+
+    @Transactional(readOnly = true)
+    public boolean hasMedia(String entityType, Long entityId, String mediaType) {
+        if (entityId == null) return false;
+
+        String normalizedEntityType = normalizeUpper(entityType, null);
+        String normalizedMediaType = normalizeUpper(mediaType, null);
+        if (normalizedEntityType == null || normalizedMediaType == null) return false;
+
+        return mediaItemRepository.existsByEntityTypeAndEntityIdAndMediaType(
+                normalizedEntityType,
+                entityId,
+                normalizedMediaType
+        );
+    }
+
+    public MediaItem createWikimediaMedia(
+            String entityType,
+            Long entityId,
+            String mediaType,
+            R2MediaStorageService.UploadResult upload,
+            String sourceUrl,
+            String title
+    ) {
+        if (entityId == null) return null;
+        if (upload == null || upload.storageKey() == null || upload.storageKey().isBlank()) return null;
+
+        String normalizedEntityType = normalizeUpper(entityType, "MISC");
+        String normalizedMediaType = normalizeUpper(mediaType, MEDIA_IMAGE);
+
+        MediaItem item = new MediaItem();
+        item.setEntityType(normalizedEntityType);
+        item.setEntityId(entityId);
+        item.setMediaType(normalizedMediaType);
+        item.setProvider(PROVIDER_WIKIMEDIA);
+        item.setExternalId(sourceUrl);
+        item.setTitle(title);
+        item.setStorageKey(upload.storageKey().trim());
+        item.setThumbUrl(sourceUrl);
+        item.setMimeType(upload.contentType());
+        item.setPosition(nextPosition(normalizedEntityType, entityId));
+
+        return mediaItemRepository.save(item);
     }
 
     public MediaItem createCloudMedia(
@@ -111,6 +160,13 @@ public class MediaItemService {
         return mediaItemRepository.save(item);
     }
 
+    /**
+     * Diff-based replace:
+     * - mantém itens que continuam na lista
+     * - apaga da BD + R2 apenas os itens removidos
+     * - adiciona apenas os novos
+     * - atualiza posições conforme ordem recebida do FE
+     */
     public void replaceMedia(
             String entityType,
             Long entityId,
@@ -124,24 +180,114 @@ public class MediaItemService {
         String normalizedMediaType = normalizeUpper(mediaType, MEDIA_FILE);
         String normalizedProvider = normalizeLower(provider, PROVIDER_MANUAL);
 
-        mediaItemRepository.deleteByEntityTypeAndEntityIdAndMediaType(normalizedEntityType, entityId, normalizedMediaType);
+        List<String> nextKeys = normalizeKeys(storageKeys);
 
-        if (storageKeys == null || storageKeys.isEmpty()) return;
+        List<MediaItem> existing = mediaItemRepository
+                .findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(normalizedEntityType, entityId)
+                .stream()
+                .filter(item -> normalizedMediaType.equalsIgnoreCase(item.getMediaType()))
+                .toList();
+
+        List<MediaItem> toDelete = existing.stream()
+                .filter(item -> !nextKeys.contains(normalizeStorageKey(item.getStorageKey())))
+                .toList();
+
+        deleteItemsAndStorage(toDelete);
 
         int pos = 0;
-        for (String key : storageKeys) {
-            if (key == null || key.isBlank()) continue;
+
+        for (String key : nextKeys) {
+            MediaItem existingItem = findByStorageKey(existing, key);
+
+            if (existingItem != null) {
+                existingItem.setPosition(pos++);
+                mediaItemRepository.save(existingItem);
+                continue;
+            }
 
             MediaItem item = new MediaItem();
             item.setEntityType(normalizedEntityType);
             item.setEntityId(entityId);
             item.setMediaType(normalizedMediaType);
             item.setProvider(normalizedProvider);
-            item.setStorageKey(key.trim());
+            item.setStorageKey(key);
             item.setPosition(pos++);
 
             mediaItemRepository.save(item);
         }
+    }
+
+    public void deleteMediaAndStorage(String entityType, Long entityId) {
+        if (entityId == null) return;
+
+        String normalizedEntityType = normalizeUpper(entityType, null);
+        if (normalizedEntityType == null) return;
+
+        List<MediaItem> items = mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(
+                normalizedEntityType,
+                entityId
+        );
+
+        deleteItemsAndStorage(items);
+    }
+
+    public void deleteMediaAndStorage(String entityType, Long entityId, String mediaType) {
+        if (entityId == null) return;
+
+        String normalizedEntityType = normalizeUpper(entityType, null);
+        String normalizedMediaType = normalizeUpper(mediaType, null);
+        if (normalizedEntityType == null) return;
+
+        List<MediaItem> items = mediaItemRepository.findByEntityTypeAndEntityIdOrderByPositionAscIdAsc(
+                normalizedEntityType,
+                entityId
+        );
+
+        if (normalizedMediaType != null) {
+            items = items.stream()
+                    .filter(item -> normalizedMediaType.equalsIgnoreCase(item.getMediaType()))
+                    .toList();
+        }
+
+        deleteItemsAndStorage(items);
+    }
+
+    private void deleteItemsAndStorage(List<MediaItem> items) {
+        if (items == null || items.isEmpty()) return;
+
+        for (MediaItem item : items) {
+            deleteStorageObjectIfPresent(item);
+        }
+
+        mediaItemRepository.deleteAll(items);
+    }
+
+    private void deleteStorageObjectIfPresent(MediaItem item) {
+        if (item == null) return;
+
+        String storageKey = safe(item.getStorageKey());
+        if (storageKey.isBlank()) return;
+
+        try {
+            r2MediaStorageService.deleteObject(storageKey);
+        } catch (Exception ex) {
+            System.out.println("[MEDIA] failed deleting R2 object storageKey=" +
+                    storageKey + " -> " + ex.getMessage());
+        }
+    }
+
+    private MediaItem findByStorageKey(List<MediaItem> items, String storageKey) {
+        if (items == null || items.isEmpty()) return null;
+
+        String normalized = normalizeStorageKey(storageKey);
+
+        for (MediaItem item : items) {
+            if (normalized.equals(normalizeStorageKey(item.getStorageKey()))) {
+                return item;
+            }
+        }
+
+        return null;
     }
 
     private int nextPosition(String entityType, Long entityId) {
@@ -151,6 +297,23 @@ public class MediaItemService {
                 .max(Integer::compareTo)
                 .map(v -> v + 1)
                 .orElse(0);
+    }
+
+    private static List<String> normalizeKeys(List<String> input) {
+        if (input == null || input.isEmpty()) return List.of();
+
+        List<String> out = new ArrayList<>();
+
+        for (String value : input) {
+            String key = normalizeStorageKey(value);
+            if (key.isBlank()) continue;
+
+            if (!out.contains(key)) {
+                out.add(key);
+            }
+        }
+
+        return out;
     }
 
     private static String normalizeUpper(String value, String fallback) {
@@ -163,5 +326,27 @@ public class MediaItemService {
         String v = value == null || value.isBlank() ? fallback : value;
         if (v == null || v.isBlank()) return null;
         return v.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private static String safe(String value) {
+        return value == null ? "" : value.trim();
+    }
+
+    private static String normalizeStorageKey(String value) {
+        String v = safe(value);
+        if (v.isBlank()) return "";
+
+        int hashIdx = v.indexOf('#');
+        if (hashIdx >= 0) {
+            v = v.substring(0, hashIdx);
+        }
+
+        String marker = ".r2.dev/";
+        int idx = v.indexOf(marker);
+        if (idx >= 0) {
+            return v.substring(idx + marker.length()).trim();
+        }
+
+        return v.trim();
     }
 }
